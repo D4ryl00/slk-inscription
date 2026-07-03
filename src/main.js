@@ -7,6 +7,7 @@ import {
   GRADES_SHIDOKAN,
   MOTIVATIONS,
   OFFERS,
+  PAYMENT_METHODS,
   getOffer,
 } from './shared/config.js';
 import { computePrice, formatEuros } from './shared/pricing.js';
@@ -57,6 +58,25 @@ function setRequired(container, required) {
   });
 }
 
+// --- Moyens de règlement hors ligne (montants saisis) -----------------------
+const offlineMethodsWrap = $('#offlineMethods');
+for (const [key, m] of Object.entries(PAYMENT_METHODS)) {
+  const label = document.createElement('label');
+  label.innerHTML =
+    `${m.label} (€)` +
+    `<input type="number" name="offline_${key}" min="0" step="0.01" placeholder="0" />`;
+  offlineMethodsWrap.appendChild(label);
+}
+
+function readOfflinePayments(fd) {
+  const list = [];
+  for (const key of Object.keys(PAYMENT_METHODS)) {
+    const amount = parseFloat(fd.get(`offline_${key}`) || '0');
+    if (amount > 0) list.push({ method: key, amount });
+  }
+  return list;
+}
+
 // --- Aide : afficher le champ code si une aide est choisie -------------------
 const aidType = $('#aidType');
 const aidCodeWrap = $('#aidCodeWrap');
@@ -99,6 +119,7 @@ function readForm() {
     familyAlreadyRegistered: parseInt(fd.get('familyAlreadyRegistered') || '0', 10) || 0,
     paymentPlan: fd.get('paymentPlan') || '1x',
     aid: aidType.value ? { type: aidType.value, code: (fd.get('aidCode') || '').trim() } : { type: null },
+    offlinePayments: readOfflinePayments(fd),
     reglementInterieur: fd.get('reglementInterieur') === 'on',
     rgpdConsent: fd.get('rgpdConsent') === 'on',
     engagementPieces: fd.get('engagementPieces') === 'on',
@@ -124,19 +145,36 @@ function refresh() {
     paymentPlan: s.paymentPlan,
     familyAlreadyRegistered: s.familyAlreadyRegistered,
     aid: s.aid,
+    offlinePayments: s.offlinePayments,
   });
-  const total = $('#priceTotal');
+  const totalEl = $('#priceTotal');
+  const cbEl = $('#priceCb');
   const detail = $('#priceDetail');
+  const submitBtn = $('#submitBtn');
+
   if (!price.ok) {
-    total.textContent = '—';
+    totalEl.textContent = '—';
+    cbEl.textContent = '—';
     detail.textContent = offer ? price.error : 'Sélectionnez une formule.';
+    submitBtn.disabled = Boolean(offer); // bloque si offre choisie mais prix invalide
   } else {
-    total.textContent = formatEuros(price.totalCents);
+    submitBtn.disabled = false;
+    totalEl.textContent = formatEuros(price.totalCents);
+    cbEl.textContent = formatEuros(price.cbAmountCents);
     const parts = [`Cotisation : ${formatEuros(price.baseCents)}`];
     if (price.familyDiscountCents > 0) parts.push(`Réduction famille : −${formatEuros(price.familyDiscountCents)}`);
     if (price.aidApplied) parts.push(`Aide ${price.aidApplied.label} : −${formatEuros(price.aidApplied.amountCents)}`);
-    parts.push(s.paymentPlan === '3x' ? 'Réglé en 3 fois' : 'Réglé en 1 fois');
+    for (const o of price.offlinePayments) parts.push(`${o.label} (hors ligne) : −${formatEuros(o.amountCents)}`);
+    parts.push(
+      price.cbAmountCents > 0
+        ? `À payer en ligne : ${formatEuros(price.cbAmountCents)}${s.paymentPlan === '3x' ? ' en 3 fois' : ''}`
+        : 'Aucun paiement en ligne (tout réglé hors ligne)',
+    );
     detail.innerHTML = parts.map((p) => `<span>${p}</span>`).join('');
+    submitBtn.textContent =
+      price.cbAmountCents > 0
+        ? `Payer ${formatEuros(price.cbAmountCents)} en ligne et m'inscrire`
+        : 'Valider mon inscription (règlement au bureau)';
   }
 
   // Pièces à rapporter
@@ -179,7 +217,7 @@ form.addEventListener('submit', async (e) => {
 
   const btn = $('#submitBtn');
   btn.disabled = true;
-  btn.textContent = 'Redirection vers le paiement…';
+  btn.textContent = 'Traitement…';
 
   try {
     const res = await fetch('/api/create-checkout', {
@@ -194,6 +232,6 @@ form.addEventListener('submit', async (e) => {
   } catch (err) {
     errorEl.textContent = err.message;
     btn.disabled = false;
-    btn.textContent = 'Payer et m\'inscrire';
+    refresh(); // restaure le libellé du bouton
   }
 });

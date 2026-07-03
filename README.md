@@ -13,6 +13,12 @@ et enregistrement automatique de l'adhérent dans un **Google Sheet** après pai
 > au bureau (attestation mineur / certificat majeur / fond d'œil+ECG pour les disciplines
 > de contact / justificatif d'aide). Le suivi des pièces reste manuel dans le Sheet.
 
+**Paiement mixte.** Le total dû = cotisation − réduction famille − aides (PEPS/Pass'Sport).
+L'adhérent peut régler une partie **hors ligne** (chèque, chèques vacances, espèces, encaissés
+au bureau) ; le **reste** est payé en CB sur HelloAsso. Si le hors ligne couvre tout, **aucun
+paiement en ligne** n'a lieu et la ligne est écrite directement dans le Sheet. Le détail (total,
+payé en ligne, chaque moyen hors ligne et sa valeur) est inscrit dans le Sheet.
+
 ## Architecture (flux)
 
 ```
@@ -102,8 +108,9 @@ Doc : <https://dev.helloasso.com/docs/obtenir-une-cl%C3%A9-api>
    **Ajouter une clé → JSON** (un fichier `.json` se télécharge).
 4. Créer (ou dupliquer) un **Google Sheet de test** dont la **1re ligne** reprend, à partir de
    la **colonne A**, les en-têtes de `FORM_COLUMNS` (`src/shared/config.js`) — ce sont les seules
-   colonnes écrites par le site. Ajouter **à droite**, à la main, les colonnes de suivi
-   (`MANUAL_COLUMNS` : CERTIF MÉD, PHOTO, ABANDON, Grade…). Noter l'**id** du Sheet (dans l'URL).
+   colonnes écrites par le site. Le bureau peut ajouter **à droite**, à la main, ses propres
+   colonnes de suivi (CERTIF MÉD, PHOTO, ABANDON, Grade…) : le code n'y touche jamais. Noter
+   l'**id** du Sheet (dans l'URL).
 5. **Partager** ce Sheet (bouton *Partager*, accès **Éditeur**) avec l'email du compte de
    service (`…@…iam.gserviceaccount.com`).
 
@@ -164,7 +171,9 @@ Mettre la même URL publique dans `SITE_URL`. Parcours de test :
   incrémentale : chaque adhérent déclare combien de membres du foyer sont déjà inscrits, et la
   remise est répartie pour que le cumul = le barème (appliqué une seule fois). ⚠️ **Déclaratif** :
   repose sur l'honnêteté de la saisie ; le bureau peut recouper via le nom de famille dans le Sheet.
-- **Montants des aides** PEPS / Pass'Sport (`AIDS`) — à confirmer chaque saison.
+- **Montants des aides** (`AIDS`) — Pass'Sport 70 €, PEPS 30 € (à revérifier chaque saison).
+- **Moyens de paiement hors ligne** (`PAYMENT_METHODS`) — chèque, chèques vacances, espèces ;
+  ajouter « Prime Enfant » si nécessaire.
 - **Cardio Budo = discipline de contact ?** (`DISCIPLINES.cardio.contact`) — défaut : non.
 - **Colonnes ambiguës** : `Règlement intérieur` (auto) vs `REGLEMENT` (bureau) ; doublon
   éventuel `Documents coupon sport` vs `PEPS`/`PASS'SPORT`.

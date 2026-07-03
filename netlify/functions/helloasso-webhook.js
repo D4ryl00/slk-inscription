@@ -62,10 +62,13 @@ export default async (req) => {
 
   const pay = {
     date: order.date || new Date().toISOString(),
-    amountCents: record.price.totalCents,
-    planLabel: record.price.planLabel,
+    netTotalCents: record.price.netTotalCents,
+    onlineAmountCents: record.price.cbAmountCents,
+    onlinePaymentId: paymentId,
+    onlinePlanLabel: record.price.planLabel,
+    offlinePayments: record.price.offlinePayments || [],
+    offlineTotalCents: record.price.offlineTotalCents || 0,
     familyDiscountCents: record.price.familyDiscountCents || 0,
-    paymentId,
   };
 
   try {

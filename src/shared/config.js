@@ -88,16 +88,28 @@ export const PAYMENT_PLANS = {
 export const AIDS = {
   passsport: {
     label: "Pass'Sport",
-    amount: 70, // À CONFIRMER (Pass'Sport 2025-2026)
+    amount: 70,
     requiresCode: true,
     column: "PASS'SPORT",
   },
   peps: {
     label: 'PEPS',
-    amount: 50, // À CONFIRMER (barème VBSL / PEPS)
+    amount: 30,
     requiresCode: true,
     column: 'PEPS',
   },
+};
+
+/**
+ * Moyens de paiement HORS LIGNE (encaissés au bureau). Le montant saisi pour
+ * chacun est DÉDUIT de ce qui reste à payer en CB sur HelloAsso. Si le total
+ * hors ligne couvre toute la cotisation, aucun paiement en ligne n'a lieu.
+ * ⚠️ À CONFIRMER la liste (ex. « Prime Enfant » à ajouter ?).
+ */
+export const PAYMENT_METHODS = {
+  cheque: { label: 'Chèque(s)' },
+  cheques_vacances: { label: 'Chèques vacances (ANCV)' },
+  especes: { label: 'Espèces' },
 };
 
 /**
@@ -202,30 +214,13 @@ export const FORM_COLUMNS = [
   'Grade Shidokan',
   'Cardio-Budo - Sélectionnez votre ou vos jours',
   'Mode de règlement',
-  'Règlement intérieur',
-  'RGPD consent',
+  'Total cotisation',
   'PAIEMENT',
+  'Règlements hors ligne',
   'PEPS',
   "PASS'SPORT",
-];
-
-/**
- * Colonnes de SUIVI MANUEL, à ajouter à la main dans le Sheet, APRÈS les
- * colonnes ci-dessus (à droite). Le site ne les écrit jamais. Liste indicative
- * pour préparer le document (l'ordre est libre, c'est le bureau qui gère).
- */
-export const MANUAL_COLUMNS = [
-  'Documents coupon sport',
-  'CERTIF MÉD',
-  'ATTESTATION MINEURS COMPET',
-  'PHOTO',
-  'SIKADA',
-  'PASSPORT SHIDOKAN',
-  'REGLEMENT',
-  'ABANDON',
-  'PRESENCE COURS',
-  'Grade',
-  'Nouveau grade',
+  'Règlement intérieur',
+  'RGPD consent',
 ];
 
 /** Jours proposés pour le Cardio Budo (À CONFIRMER avec le planning du club). */

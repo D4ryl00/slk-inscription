@@ -1,10 +1,14 @@
 // POST /api/create-checkout
-// Recalcule le prix (source de vérité), stocke la soumission dans Netlify Blobs,
-// crée le checkout-intent HelloAsso et renvoie l'URL de paiement.
-// AUCUNE écriture dans le Sheet ici : elle a lieu au webhook, après paiement.
+// Recalcule le prix (source de vérité) et le montant restant à payer en CB.
+//  - Reste CB > 0 : stocke la soumission dans Blobs + crée le checkout-intent
+//    HelloAsso ; la ligne Sheet est écrite au webhook, après paiement.
+//  - Reste CB = 0 (tout réglé hors ligne) : AUCUN passage par HelloAsso, la
+//    ligne est écrite DIRECTEMENT dans le Sheet.
 
 import { getStore } from '@netlify/blobs';
 import { buildInstallments, computePrice } from '../../src/shared/pricing.js';
+import { buildSheetRow } from '../../src/shared/sheet-row.js';
+import { appendRow } from './lib/google.js';
 import { createCheckoutIntent } from './lib/helloasso.js';
 
 const REQUIRED = ['prenom', 'nom', 'email', 'dateNaissance', 'offerId', 'paymentPlan'];
@@ -32,21 +36,43 @@ export default async (req) => {
     paymentPlan: s.paymentPlan,
     familyAlreadyRegistered: s.familyAlreadyRegistered,
     aid: s.aid,
+    offlinePayments: s.offlinePayments,
   });
   if (!price.ok) return json({ error: price.error }, 400);
-  if (price.totalCents <= 0) {
-    return json({ error: 'Montant à payer nul — vérifiez l\'offre/les aides.' }, 400);
+
+  const site = (process.env.SITE_URL || 'http://localhost:8888').replace(/\/$/, '');
+  const planLabel = `CB ${s.paymentPlan}`;
+
+  // ─── Cas 100 % hors ligne : aucun paiement CB → écriture directe ────────────
+  if (price.cbAmountCents <= 0) {
+    try {
+      await appendRow(
+        buildSheetRow(s, {
+          date: new Date().toISOString(),
+          netTotalCents: price.totalCents,
+          onlineAmountCents: 0,
+          onlinePaymentId: '',
+          onlinePlanLabel: '',
+          offlinePayments: price.offlinePayments,
+          offlineTotalCents: price.offlineTotalCents,
+          familyDiscountCents: price.familyDiscountCents,
+        }),
+      );
+    } catch (err) {
+      console.error('create-checkout: écriture Sheet (hors ligne)', err);
+      return json({ error: 'Erreur interne (enregistrement). Réessayez.' }, 500);
+    }
+    return json({ redirectUrl: `${site}/merci?offline=1` });
   }
 
+  // ─── Cas avec paiement CB ───────────────────────────────────────────────────
   const memberId = crypto.randomUUID();
-  const planLabel = `CB ${s.paymentPlan}`;
-  const { initialAmount, terms } = buildInstallments(price.totalCents, s.paymentPlan);
-  const site = (process.env.SITE_URL || 'http://localhost:8888').replace(/\/$/, '');
+  const { initialAmount, terms } = buildInstallments(price.cbAmountCents, s.paymentPlan);
 
   let intent;
   try {
     intent = await createCheckoutIntent({
-      totalAmount: price.totalCents,
+      totalAmount: price.cbAmountCents,
       initialAmount,
       terms,
       itemName: `Adhésion SLK — ${price.offer.label}`,
@@ -63,15 +89,18 @@ export default async (req) => {
     return json({ error: 'Impossible de contacter HelloAsso. Réessayez plus tard.' }, 502);
   }
 
-  // Stocke la soumission (relue par le webhook via memberId).
+  // Stocke la soumission + le détail du prix (relus par le webhook via memberId).
   try {
     const store = getStore('submissions');
     await store.setJSON(memberId, {
       submission: s,
       price: {
-        totalCents: price.totalCents,
-        planLabel,
+        netTotalCents: price.totalCents,
         familyDiscountCents: price.familyDiscountCents,
+        cbAmountCents: price.cbAmountCents,
+        offlineTotalCents: price.offlineTotalCents,
+        offlinePayments: price.offlinePayments,
+        planLabel,
       },
       checkoutIntentId: intent.id,
       createdAt: new Date().toISOString(),

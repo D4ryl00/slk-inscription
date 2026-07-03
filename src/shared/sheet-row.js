@@ -1,9 +1,6 @@
 // Construit la ligne du Google Sheet dans l'ORDRE EXACT de FORM_COLUMNS.
-// Le site n'écrit QUE les colonnes issues du formulaire (bloc contigu à partir
-// de la colonne A). Les colonnes de suivi manuel (MANUAL_COLUMNS) sont ajoutées
-// à la main dans le document, à droite, et ne sont jamais touchées par le code.
-//
-// Écriture positionnelle (des en-têtes sont en double) → on renvoie un tableau.
+// Le site n'écrit QUE les colonnes issues du formulaire (bloc contigu dès la
+// colonne A). Écriture positionnelle (des en-têtes sont en double) → tableau.
 
 import { AIDS, FORM_COLUMNS, getOffer } from './config.js';
 import { formatEuros } from './pricing.js';
@@ -12,7 +9,9 @@ const oui = (b) => (b ? 'Oui' : 'Non');
 
 /**
  * @param {object} s submission envoyée par le front
- * @param {object} pay { date, amountCents, planLabel, familyDiscountCents, paymentId }
+ * @param {object} pay récapitulatif de paiement :
+ *   { date, netTotalCents, onlineAmountCents, onlinePaymentId, onlinePlanLabel,
+ *     offlinePayments:[{label,amountCents}], offlineTotalCents, familyDiscountCents }
  * @returns {(string|number)[]} exactement FORM_COLUMNS.length valeurs
  */
 export function buildSheetRow(s, pay) {
@@ -21,10 +20,31 @@ export function buildSheetRow(s, pay) {
   const addr = s.adresse || {};
   const cc = s.contactConfiance || {};
   const aid = s.aid || {};
+  const p = pay || {};
+  const offline = p.offlinePayments || [];
 
-  const paiementCell = pay
-    ? `Payé ${formatEuros(pay.amountCents)} (${pay.planLabel}) — paiement ${pay.paymentId}` +
-      (pay.familyDiscountCents ? ` — remise famille −${formatEuros(pay.familyDiscountCents)}` : '')
+  // Résumé des moyens de règlement choisis.
+  const methods = [];
+  if (p.onlineAmountCents > 0) methods.push('CB (HelloAsso)');
+  for (const o of offline) methods.push(o.label);
+  const modeReglement = methods.length ? methods.join(' + ') : 'Aucun (cotisation nulle)';
+
+  // Total cotisation (avec mention de la remise famille si elle s'applique).
+  const totalCell =
+    formatEuros(p.netTotalCents || 0) +
+    (p.familyDiscountCents ? ` (remise famille −${formatEuros(p.familyDiscountCents)} incluse)` : '');
+
+  // Montant réellement payé en ligne.
+  const paiementCell =
+    p.onlineAmountCents > 0
+      ? `En ligne ${formatEuros(p.onlineAmountCents)} (${p.onlinePlanLabel || 'CB'})` +
+        (p.onlinePaymentId ? ` — paiement ${p.onlinePaymentId}` : '')
+      : 'Aucun paiement en ligne';
+
+  // Détail des règlements hors ligne (à encaisser au bureau).
+  const horsLigneCell = offline.length
+    ? offline.map((o) => `${o.label} : ${formatEuros(o.amountCents)}`).join(' ; ') +
+      ' — à encaisser au bureau'
     : '';
 
   const aidCell = (type) => {
@@ -33,9 +53,9 @@ export function buildSheetRow(s, pay) {
     return `Déduit ${a ? a.amount + ' €' : ''} — code ${aid.code || '?'} — À VÉRIFIER`;
   };
 
-  // Ordre = FORM_COLUMNS (colonnes écrites par le site uniquement).
+  // Ordre = FORM_COLUMNS.
   const row = [
-    pay?.date || new Date().toISOString(),                 // Submission Date
+    p.date || new Date().toISOString(),                    // Submission Date
     s.nouvelAdherent || '',                                // Nouvel adhérent
     s.prenom || '',                                        // Prénom
     s.nom || '',                                           // Nom de famille
@@ -58,15 +78,16 @@ export function buildSheetRow(s, pay) {
     s.motivations || '',                                   // Motivations
     s.gradeShidokan || '',                                 // Grade Shidokan
     Array.isArray(s.cardioJours) ? s.cardioJours.join(', ') : (s.cardioJours || ''), // Cardio jours
-    pay?.planLabel || '',                                  // Mode de règlement
-    s.reglementInterieur ? 'Accepté' : '',                 // Règlement intérieur
-    s.rgpdConsent ? `Accepté le ${new Date().toISOString().slice(0, 10)}` : '', // RGPD consent
-    paiementCell,                                          // PAIEMENT
+    modeReglement,                                         // Mode de règlement
+    totalCell,                                             // Total cotisation
+    paiementCell,                                          // PAIEMENT (payé en ligne)
+    horsLigneCell,                                         // Règlements hors ligne
     aidCell('peps'),                                       // PEPS
     aidCell('passsport'),                                  // PASS'SPORT
+    s.reglementInterieur ? 'Accepté' : '',                 // Règlement intérieur
+    s.rgpdConsent ? `Accepté le ${new Date().toISOString().slice(0, 10)}` : '', // RGPD consent
   ];
 
-  // Garde-fou : la ligne doit avoir exactement le bon nombre de colonnes.
   if (row.length !== FORM_COLUMNS.length) {
     throw new Error(
       `buildSheetRow: ${row.length} valeurs pour ${FORM_COLUMNS.length} colonnes.`,

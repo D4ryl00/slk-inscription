@@ -4,6 +4,7 @@
 
 import {
   AIDS,
+  PAYMENT_METHODS,
   PAYMENT_PLANS,
   familyIncrementalDiscount,
   getOffer,
@@ -22,12 +23,15 @@ export const formatEuros = (c) =>
  * @param {'1x'|'3x'} selection.paymentPlan
  * @param {number} [selection.familyAlreadyRegistered=0] membres du foyer déjà inscrits
  * @param {{type?: 'passsport'|'peps'|null, code?: string}} [selection.aid]
+ * @param {{method: string, amount: number}[]} [selection.offlinePayments] montants (€) réglés hors ligne
  * @returns {{
  *   ok: boolean, error?: string,
  *   offer?: object, plan?: object,
  *   baseCents?: number, familyDiscountCents?: number, aidCents?: number,
  *   totalCents?: number, currency?: 'EUR',
- *   aidApplied?: {type: string, label: string, code: string, amountCents: number}|null
+ *   aidApplied?: {type: string, label: string, code: string, amountCents: number}|null,
+ *   offlinePayments?: {method: string, label: string, amountCents: number}[],
+ *   offlineTotalCents?: number, cbAmountCents?: number
  * }}
  */
 export function computePrice(selection) {
@@ -58,8 +62,27 @@ export function computePrice(selection) {
     aidApplied = { type: aidType, label: aid.label, code, amountCents: aidCents };
   }
 
-  // Le total ne peut jamais passer sous 0.
+  // Total dû (cotisation nette) — ne peut jamais passer sous 0.
   const totalCents = Math.max(0, baseCents - familyDiscountCents - aidCents);
+
+  // --- Règlements hors ligne (chèque, chèques vacances, espèces) --------------
+  // Chaque montant est déduit de ce qui reste à payer en CB sur HelloAsso.
+  const offlinePayments = [];
+  let offlineTotalCents = 0;
+  for (const p of selection?.offlinePayments || []) {
+    const method = PAYMENT_METHODS[p.method];
+    if (!method) return { ok: false, error: `Moyen de paiement inconnu : ${p.method}.` };
+    const cents = Math.round((Number(p.amount) || 0) * 100);
+    if (cents < 0) return { ok: false, error: 'Un montant hors ligne est négatif.' };
+    if (cents > 0) {
+      offlinePayments.push({ method: p.method, label: method.label, amountCents: cents });
+      offlineTotalCents += cents;
+    }
+  }
+  if (offlineTotalCents > totalCents) {
+    return { ok: false, error: 'Les règlements hors ligne dépassent le total dû.' };
+  }
+  const cbAmountCents = totalCents - offlineTotalCents; // payé en ligne (peut être 0)
 
   return {
     ok: true,
@@ -71,6 +94,9 @@ export function computePrice(selection) {
     aidApplied,
     totalCents,
     currency: 'EUR',
+    offlinePayments,
+    offlineTotalCents,
+    cbAmountCents,
   };
 }
 

@@ -112,6 +112,14 @@
             </label>
             <p class="hint">Le montant de l'aide est déduit du total. Vous devrez rapporter le justificatif au bureau.</p>
           </fieldset>
+
+          <fieldset id="offlineWrap">
+            <legend>Régler une partie hors ligne (optionnel)</legend>
+            <p class="hint">Chèque, chèques vacances, espèces : ces montants sont encaissés au bureau
+              et déduits de ce que vous payez en ligne. Si tout est réglé hors ligne, aucun
+              paiement par carte n'est demandé.</p>
+            <div id="offlineMethods" class="grid2"></div>
+          </fieldset>
         </section>
 
         <!-- ── Pièces à rapporter ───────────────────────────────────── -->
@@ -125,7 +133,8 @@
         <section class="card">
           <h2>5. Récapitulatif</h2>
           <div id="priceBox" class="price">
-            <div class="price-line"><span>Total</span><strong id="priceTotal">—</strong></div>
+            <div class="price-line"><span>Total cotisation</span><strong id="priceTotal">—</strong></div>
+            <div class="price-line"><span>À payer en ligne (CB)</span><strong id="priceCb">—</strong></div>
             <div id="priceDetail" class="price-detail"></div>
           </div>
 

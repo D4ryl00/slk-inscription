@@ -9,8 +9,8 @@
   <body>
     <main class="result">
       <div class="badge">✅</div>
-      <h1>Merci, votre paiement a été enregistré !</h1>
-      <p>Votre adhésion au Stade Laurentin Karaté Shidokan est en cours de finalisation.
+      <h1 id="title">Merci, votre paiement a été enregistré !</h1>
+      <p id="lead">Votre adhésion au Stade Laurentin Karaté Shidokan est en cours de finalisation.
         Vous allez recevoir un reçu de paiement par email de la part de HelloAsso.</p>
 
       <section class="card">
@@ -28,5 +28,13 @@
 
       <a class="btn" href="./index.html">Inscrire un autre adhérent</a>
     </main>
+    <script>
+      if (new URLSearchParams(location.search).get('offline') === '1') {
+        document.getElementById('title').textContent = 'Merci, votre inscription est enregistrée !';
+        document.getElementById('lead').textContent =
+          'Vous avez choisi de régler au bureau. Votre adhésion est bien enregistrée ; pensez à ' +
+          'apporter votre règlement (chèque, chèques vacances ou espèces) au bureau du club.';
+      }
+    </script>
   </body>
 </html>
