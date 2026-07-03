@@ -64,6 +64,7 @@ export default async (req) => {
     date: order.date || new Date().toISOString(),
     amountCents: record.price.totalCents,
     planLabel: record.price.planLabel,
+    familyDiscountCents: record.price.familyDiscountCents || 0,
     paymentId,
   };
 

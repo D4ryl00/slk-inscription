@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { AIDS, SHEET_COLUMNS } from '../src/shared/config.js';
+import { AIDS, SHEET_COLUMNS, familyIncrementalDiscount } from '../src/shared/config.js';
 import { buildInstallments, computePrice } from '../src/shared/pricing.js';
 import { buildSheetRow } from '../src/shared/sheet-row.js';
 
@@ -34,6 +34,22 @@ test('aide sans code → erreur', () => {
 test('offre inconnue → erreur', () => {
   const p = computePrice({ offerId: 'nope', paymentPlan: '1x' });
   assert.equal(p.ok, false);
+});
+
+test('réduction famille incrémentale (cumul = barème, appliqué une fois)', () => {
+  assert.equal(familyIncrementalDiscount(0), 0);   // 1er membre
+  assert.equal(familyIncrementalDiscount(1), 50);  // 2e → cumul 50
+  assert.equal(familyIncrementalDiscount(2), 20);  // 3e → cumul 70
+  assert.equal(familyIncrementalDiscount(3), 30);  // 4e → cumul 100
+  assert.equal(familyIncrementalDiscount(4), 0);   // 5e → plafond
+  const cumul4 = [0, 1, 2, 3].reduce((a, n) => a + familyIncrementalDiscount(n), 0);
+  assert.equal(cumul4, 100);
+});
+
+test('computePrice applique la remise famille incrémentale', () => {
+  const p = computePrice({ offerId: 'cardio-1', paymentPlan: '1x', familyAlreadyRegistered: 1 });
+  assert.equal(p.familyDiscountCents, 5000);       // 2e membre → −50 €
+  assert.equal(p.totalCents, 18000 - 5000);        // 180 € − 50 €
 });
 
 test('échéances 3x : somme exacte = total', () => {

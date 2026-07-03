@@ -111,20 +111,33 @@ export const AIDS = {
  * `enabled: false` pour éviter de déduire le forfait plusieurs fois.
  */
 export const FAMILY_DISCOUNT = {
-  enabled: false, // → true une fois le panier multi-adhérents en place
+  enabled: true,
+  // Forfait CUMULÉ pour toute la famille selon le nombre total de membres inscrits.
+  // Appliqué une seule fois, réparti de façon incrémentale au fil des inscriptions
+  // (1 adhérent = 1 formulaire ; on demande combien de membres sont déjà inscrits).
   tiers: [
-    { members: 2, discount: 50 },
-    { members: 3, discount: 70 },
-    { members: 4, discount: 100 }, // 4 membres ou plus
+    { members: 2, total: 50 },
+    { members: 3, total: 70 },
+    { members: 4, total: 100 }, // 4 membres ou plus (plafond)
   ],
 };
 
-/** Remise famille (euros) pour un nombre de membres donné. */
-export function familyDiscountEuros(members) {
+/** Forfait famille CUMULÉ pour `members` membres au total (0 / 50 / 70 / 100). */
+export function familyDiscountTotal(members) {
+  let total = 0;
+  for (const t of FAMILY_DISCOUNT.tiers) if (members >= t.members) total = t.total;
+  return total;
+}
+
+/**
+ * Remise à appliquer pour UN nouvel adhérent, sachant combien de membres de sa
+ * famille sont DÉJÀ inscrits. = cumul(après) − cumul(avant), afin que la remise
+ * totale de la famille corresponde au barème et ne soit comptée qu'une fois.
+ */
+export function familyIncrementalDiscount(alreadyRegistered) {
   if (!FAMILY_DISCOUNT.enabled) return 0;
-  let discount = 0;
-  for (const t of FAMILY_DISCOUNT.tiers) if (members >= t.members) discount = t.discount;
-  return discount;
+  const before = Math.max(0, Math.trunc(alreadyRegistered || 0));
+  return familyDiscountTotal(before + 1) - familyDiscountTotal(before);
 }
 
 /**

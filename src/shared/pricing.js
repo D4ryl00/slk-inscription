@@ -4,9 +4,8 @@
 
 import {
   AIDS,
-  FAMILY_DISCOUNT,
   PAYMENT_PLANS,
-  familyDiscountEuros,
+  familyIncrementalDiscount,
   getOffer,
 } from './config.js';
 
@@ -21,7 +20,7 @@ export const formatEuros = (c) =>
  * @param {object} selection
  * @param {string} selection.offerId
  * @param {'1x'|'3x'} selection.paymentPlan
- * @param {number} [selection.familyMembers=1] nb de membres de la même famille
+ * @param {number} [selection.familyAlreadyRegistered=0] membres du foyer déjà inscrits
  * @param {{type?: 'passsport'|'peps'|null, code?: string}} [selection.aid]
  * @returns {{
  *   ok: boolean, error?: string,
@@ -40,12 +39,10 @@ export function computePrice(selection) {
 
   const baseCents = toCents(offer.priceAnnual);
 
-  // --- Réduction famille (forfait par nombre de membres, cf. config) ---------
-  // ⚠️ N'est appliquée que si FAMILY_DISCOUNT.enabled (panier multi-adhérents).
-  let familyDiscountCents = 0;
-  if (FAMILY_DISCOUNT.enabled) {
-    familyDiscountCents = toCents(familyDiscountEuros(selection.familyMembers || 1));
-  }
+  // --- Réduction famille (forfait incrémental selon les membres déjà inscrits) --
+  const familyDiscountCents = toCents(
+    familyIncrementalDiscount(selection.familyAlreadyRegistered || 0),
+  );
 
   // --- Aide (PEPS / Pass'Sport), déduite uniquement si un code est saisi ------
   let aidCents = 0;

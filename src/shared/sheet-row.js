@@ -20,7 +20,8 @@ export function buildSheetRow(s, pay) {
   const aid = s.aid || {};
 
   const paiementCell = pay
-    ? `Payé ${formatEuros(pay.amountCents)} (${pay.planLabel}) — paiement ${pay.paymentId}`
+    ? `Payé ${formatEuros(pay.amountCents)} (${pay.planLabel}) — paiement ${pay.paymentId}` +
+      (pay.familyDiscountCents ? ` — remise famille −${formatEuros(pay.familyDiscountCents)}` : '')
     : '';
 
   const aidCell = (type) => {

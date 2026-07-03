@@ -30,7 +30,7 @@ export default async (req) => {
   const price = computePrice({
     offerId: s.offerId,
     paymentPlan: s.paymentPlan,
-    familyMembers: s.familyMembers,
+    familyAlreadyRegistered: s.familyAlreadyRegistered,
     aid: s.aid,
   });
   if (!price.ok) return json({ error: price.error }, 400);
@@ -68,7 +68,11 @@ export default async (req) => {
     const store = getStore('submissions');
     await store.setJSON(memberId, {
       submission: s,
-      price: { totalCents: price.totalCents, planLabel },
+      price: {
+        totalCents: price.totalCents,
+        planLabel,
+        familyDiscountCents: price.familyDiscountCents,
+      },
       checkoutIntentId: intent.id,
       createdAt: new Date().toISOString(),
     });

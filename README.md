@@ -158,8 +158,14 @@ Mettre la même URL publique dans `SITE_URL`. Parcours de test :
 
 - **Tarifs / liste des formules** (`src/shared/config.js`, `OFFERS`) — repris de la capture
   HelloAsso 2025-2026 ; vérifier notamment l'existence d'un tarif « Karaté seul ».
-- **Réduction famille** (`FAMILY_DISCOUNT`) — désactivée par défaut, formule à définir.
+- **Réduction famille** (`FAMILY_DISCOUNT`) — barème −50/−70/−100 € **implémenté** de façon
+  incrémentale : chaque adhérent déclare combien de membres du foyer sont déjà inscrits, et la
+  remise est répartie pour que le cumul = le barème (appliqué une seule fois). ⚠️ **Déclaratif** :
+  repose sur l'honnêteté de la saisie ; le bureau peut recouper via le nom de famille dans le Sheet.
 - **Montants des aides** PEPS / Pass'Sport (`AIDS`) — à confirmer chaque saison.
+- **Liste des grades Shidokan** (`GRADES_SHIDOKAN`) — liste générique, à remplacer par celle du club.
+- **Champ « État/Région »** — obligatoire dans le Jotform mais sans colonne dans le Sheet : à
+  trancher (ajouter le champ + une colonne, ou l'omettre).
 - **Cardio Budo = discipline de contact ?** (`DISCIPLINES.cardio.contact`) — défaut : non.
 - **Colonnes ambiguës** : `Règlement intérieur` (auto) vs `REGLEMENT` (bureau) ; doublon
   éventuel `Documents coupon sport` vs `PEPS`/`PASS'SPORT`.

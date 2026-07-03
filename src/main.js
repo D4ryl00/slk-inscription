@@ -95,6 +95,7 @@ function readForm() {
     motivations: (fd.get('motivations') || '').trim(),
     gradeShidokan: (fd.get('gradeShidokan') || '').trim(),
     cardioJours: fd.getAll('cardioJours'),
+    familyAlreadyRegistered: parseInt(fd.get('familyAlreadyRegistered') || '0', 10) || 0,
     paymentPlan: fd.get('paymentPlan') || '1x',
     aid: aidType.value ? { type: aidType.value, code: (fd.get('aidCode') || '').trim() } : { type: null },
     reglementInterieur: fd.get('reglementInterieur') === 'on',
@@ -120,6 +121,7 @@ function refresh() {
   const price = computePrice({
     offerId: s.offerId,
     paymentPlan: s.paymentPlan,
+    familyAlreadyRegistered: s.familyAlreadyRegistered,
     aid: s.aid,
   });
   const total = $('#priceTotal');
