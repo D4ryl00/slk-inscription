@@ -1,16 +1,19 @@
-// Construit la ligne du Google Sheet dans l'ORDRE EXACT de SHEET_COLUMNS.
-// Écriture positionnelle (des en-têtes sont en double) → on renvoie un tableau,
-// jamais un objet indexé par nom.
+// Construit la ligne du Google Sheet dans l'ORDRE EXACT de FORM_COLUMNS.
+// Le site n'écrit QUE les colonnes issues du formulaire (bloc contigu à partir
+// de la colonne A). Les colonnes de suivi manuel (MANUAL_COLUMNS) sont ajoutées
+// à la main dans le document, à droite, et ne sont jamais touchées par le code.
+//
+// Écriture positionnelle (des en-têtes sont en double) → on renvoie un tableau.
 
-import { AIDS, SHEET_COLUMNS, getOffer } from './config.js';
+import { AIDS, FORM_COLUMNS, getOffer } from './config.js';
 import { formatEuros } from './pricing.js';
 
 const oui = (b) => (b ? 'Oui' : 'Non');
 
 /**
  * @param {object} s submission envoyée par le front
- * @param {object} pay { date, amountCents, planLabel, paymentId }
- * @returns {(string|number)[]} exactement SHEET_COLUMNS.length valeurs
+ * @param {object} pay { date, amountCents, planLabel, familyDiscountCents, paymentId }
+ * @returns {(string|number)[]} exactement FORM_COLUMNS.length valeurs
  */
 export function buildSheetRow(s, pay) {
   const offer = getOffer(s.offerId);
@@ -30,7 +33,7 @@ export function buildSheetRow(s, pay) {
     return `Déduit ${a ? a.amount + ' €' : ''} — code ${aid.code || '?'} — À VÉRIFIER`;
   };
 
-  // Ordre = SHEET_COLUMNS. Les colonnes « bureau » restent vides ('').
+  // Ordre = FORM_COLUMNS (colonnes écrites par le site uniquement).
   const row = [
     pay?.date || new Date().toISOString(),                 // Submission Date
     s.nouvelAdherent || '',                                // Nouvel adhérent
@@ -42,6 +45,7 @@ export function buildSheetRow(s, pay) {
     addr.numeroRue || '',                                  // Adresse - Numéro et rue
     addr.complement || '',                                 // Adresse - Complément
     addr.ville || '',                                      // Adresse - Ville
+    addr.etatRegion || '',                                 // Adresse - État/Région
     addr.codePostal || '',                                 // Adresse - Code Postal
     addr.pays || '',                                       // Adresse - Pays
     s.email || '',                                         // Email
@@ -55,32 +59,21 @@ export function buildSheetRow(s, pay) {
     s.gradeShidokan || '',                                 // Grade Shidokan
     Array.isArray(s.cardioJours) ? s.cardioJours.join(', ') : (s.cardioJours || ''), // Cardio jours
     pay?.planLabel || '',                                  // Mode de règlement
-    '',                                                    // Documents coupon sport (bureau)
     s.reglementInterieur ? 'Accepté' : '',                 // Règlement intérieur
     s.rgpdConsent ? `Accepté le ${new Date().toISOString().slice(0, 10)}` : '', // RGPD consent
-    '',                                                    // CERTIF MÉD (bureau)
-    '',                                                    // ATTESTATION MINEURS COMPET (bureau)
-    '',                                                    // PHOTO (bureau)
     paiementCell,                                          // PAIEMENT
-    '',                                                    // SIKADA (bureau)
     aidCell('peps'),                                       // PEPS
     aidCell('passsport'),                                  // PASS'SPORT
-    '',                                                    // PASSPORT SHIDOKAN (bureau)
-    '',                                                    // REGLEMENT (bureau)
-    '',                                                    // ABANDON (bureau)
-    '',                                                    // PRESENCE COURS (bureau)
-    '',                                                    // Grade (bureau)
-    '',                                                    // Nouveau grade (bureau)
   ];
 
   // Garde-fou : la ligne doit avoir exactement le bon nombre de colonnes.
-  if (row.length !== SHEET_COLUMNS.length) {
+  if (row.length !== FORM_COLUMNS.length) {
     throw new Error(
-      `buildSheetRow: ${row.length} valeurs pour ${SHEET_COLUMNS.length} colonnes.`,
+      `buildSheetRow: ${row.length} valeurs pour ${FORM_COLUMNS.length} colonnes.`,
     );
   }
   return row;
 }
 
 /** Index (0-based) de la colonne PAIEMENT, pour la déduplication. */
-export const PAIEMENT_COL_INDEX = SHEET_COLUMNS.indexOf('PAIEMENT');
+export const PAIEMENT_COL_INDEX = FORM_COLUMNS.indexOf('PAIEMENT');

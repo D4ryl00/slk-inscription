@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { AIDS, SHEET_COLUMNS, familyIncrementalDiscount } from '../src/shared/config.js';
+import { AIDS, FORM_COLUMNS, familyIncrementalDiscount } from '../src/shared/config.js';
 import { buildInstallments, computePrice } from '../src/shared/pricing.js';
 import { buildSheetRow } from '../src/shared/sheet-row.js';
 
@@ -78,11 +78,11 @@ test('buildSheetRow : bon nombre de colonnes et placement des champs clés', () 
   const pay = { date: '2026-07-04T10:00:00Z', amountCents: 19500, planLabel: 'CB 1x', paymentId: '999' };
   const row = buildSheetRow(submission, pay);
 
-  assert.equal(row.length, SHEET_COLUMNS.length);
-  assert.equal(row[SHEET_COLUMNS.indexOf('Email')], 'a@example.com');
-  assert.equal(row[SHEET_COLUMNS.indexOf('Section')].includes('Karaté'), true);
-  assert.equal(row[SHEET_COLUMNS.indexOf('PAIEMENT')].includes('999'), true);
-  assert.equal(row[SHEET_COLUMNS.indexOf("PASS'SPORT")].includes('PS-42'), true);
-  // colonnes « bureau » vides
-  assert.equal(row[SHEET_COLUMNS.indexOf('CERTIF MÉD')], '');
+  assert.equal(row.length, FORM_COLUMNS.length);
+  assert.equal(row[FORM_COLUMNS.indexOf('Email')], 'a@example.com');
+  assert.equal(row[FORM_COLUMNS.indexOf('Section')].includes('Karaté'), true);
+  assert.equal(row[FORM_COLUMNS.indexOf('PAIEMENT')].includes('999'), true);
+  assert.equal(row[FORM_COLUMNS.indexOf("PASS'SPORT")].includes('PS-42'), true);
+  // colonnes « bureau » NON gérées par le code (absentes de FORM_COLUMNS)
+  assert.equal(FORM_COLUMNS.includes('CERTIF MÉD'), false);
 });

@@ -6,11 +6,11 @@
 /**
  * Disciplines proposées par le club.
  * `contact: true` déclenche l'exigence médicale renforcée (fond d'œil + ECG)
- * pour les MAJEURS — cf. note FFKarate (full-contact / Shido-Boxing / MMA).
+ * pour les MAJEURS — cf. note FFKarate (full-contact / Shido-Boxing / Shido-Mix-Martial).
  */
 export const DISCIPLINES = {
   karate: { label: 'Karaté Shidokan', contact: false },
-  mma: { label: 'Shido-Mix-Martial (MMA)', contact: true },
+  mma: { label: 'Shido-Mix-Martial', contact: true },
   boxing: { label: 'Shido-Boxing', contact: true },
   // À CONFIRMER : le Cardio Budo (fitness) implique-t-il fond d'œil + ECG ?
   // Par défaut considéré NON-contact (pas de sparring / compétition).
@@ -141,17 +141,26 @@ export function familyIncrementalDiscount(alreadyRegistered) {
 }
 
 /**
- * Grades Shidokan (liste déroulante conditionnelle à la section Karaté).
- * ⚠️ À CONFIRMER : liste exacte des grades du club.
+ * Grades Shidokan (liste déroulante conditionnelle à la section Karaté),
+ * du débutant au plus gradé. Ordre fourni par le club.
  */
 export const GRADES_SHIDOKAN = [
-  'Ceinture blanche',
-  'Ceinture jaune',
-  'Ceinture orange',
-  'Ceinture verte',
-  'Ceinture bleue',
-  'Ceinture marron',
-  'Ceinture noire',
+  '10e kyu — ceinture blanche',
+  '9e kyu — ceinture orange',
+  '8e kyu — ceinture bleue',
+  '7e kyu — ceinture bleue (2 barrettes)',
+  '6e kyu — ceinture jaune',
+  '5e kyu — ceinture jaune (2 barrettes)',
+  '4e kyu — ceinture verte',
+  '3e kyu — ceinture verte (2 barrettes)',
+  '2e kyu — ceinture marron',
+  '1er kyu — ceinture marron (2 barrettes)',
+  '1er Dan',
+  '2e Dan',
+  '3e Dan',
+  '4e Dan',
+  '5e Dan',
+  '6e Dan',
 ];
 
 /** Motivations proposées (radio conditionnel à la section Karaté). */
@@ -162,11 +171,13 @@ export const MOTIVATIONS = [
 ];
 
 /**
- * En-têtes EXACTS du Google Sheet, dans l'ordre.
+ * Colonnes ÉCRITES PAR LE SITE, dans l'ordre, à partir de la colonne A du Sheet.
+ * Le webhook fait un `append` de ces colonnes uniquement.
  * ⚠️ NE PAS RÉORDONNER : l'écriture est positionnelle (des en-têtes sont en
  * double, ex. « Numéro de téléphone »), on ne peut donc pas mapper par nom.
+ * La 1re ligne du Google Sheet doit reprendre ces en-têtes, dans cet ordre.
  */
-export const SHEET_COLUMNS = [
+export const FORM_COLUMNS = [
   'Submission Date',
   'Nouvel adhérent',
   'Prénom - Nom - Prénom',
@@ -177,6 +188,7 @@ export const SHEET_COLUMNS = [
   'Adresse - Numéro et rue',
   'Adresse - Complément d\'adresse',
   'Adresse - Ville',
+  'Adresse - État/Région',
   'Adresse - Code Postal',
   'Adresse - Pays',
   'Email',
@@ -190,16 +202,24 @@ export const SHEET_COLUMNS = [
   'Grade Shidokan',
   'Cardio-Budo - Sélectionnez votre ou vos jours',
   'Mode de règlement',
-  'Documents coupon sport',
   'Règlement intérieur',
   'RGPD consent',
+  'PAIEMENT',
+  'PEPS',
+  "PASS'SPORT",
+];
+
+/**
+ * Colonnes de SUIVI MANUEL, à ajouter à la main dans le Sheet, APRÈS les
+ * colonnes ci-dessus (à droite). Le site ne les écrit jamais. Liste indicative
+ * pour préparer le document (l'ordre est libre, c'est le bureau qui gère).
+ */
+export const MANUAL_COLUMNS = [
+  'Documents coupon sport',
   'CERTIF MÉD',
   'ATTESTATION MINEURS COMPET',
   'PHOTO',
-  'PAIEMENT',
   'SIKADA',
-  'PEPS',
-  "PASS'SPORT",
   'PASSPORT SHIDOKAN',
   'REGLEMENT',
   'ABANDON',

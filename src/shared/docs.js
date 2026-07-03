@@ -51,7 +51,7 @@ export function requiredDocuments({ isMinor, offerId, aid } = {}) {
         id: 'fond-oeil-ecg',
         label: 'Fond d\'œil + électrocardiogramme (ECG)',
         help:
-          'Exigés en plus pour les disciplines de contact (Shido-Boxing, Shido-Mix-Martial/MMA). ' +
+          'Exigés en plus pour les disciplines de contact (Shido-Boxing, Shido-Mix-Martial). ' +
           'Voir la note FFKarate pour les modalités.',
         link: DOC_LINKS.noteCertificatMedical,
         linkLabel: 'Note FFKarate 2025-2026',

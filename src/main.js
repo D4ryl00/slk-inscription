@@ -80,6 +80,7 @@ function readForm() {
       numeroRue: (fd.get('adresse_numeroRue') || '').trim(),
       complement: (fd.get('adresse_complement') || '').trim(),
       ville: (fd.get('adresse_ville') || '').trim(),
+      etatRegion: (fd.get('adresse_etatRegion') || '').trim(),
       codePostal: (fd.get('adresse_codePostal') || '').trim(),
       pays: (fd.get('adresse_pays') || '').trim(),
     },

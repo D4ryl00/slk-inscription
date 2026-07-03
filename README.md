@@ -100,8 +100,10 @@ Doc : <https://dev.helloasso.com/docs/obtenir-une-cl%C3%A9-api>
 2. *APIs & Services* → **activer « Google Sheets API »** (surtout **pas** l'API Drive).
 3. *IAM & Admin → Comptes de service* → créer un compte de service → onglet *Clés* →
    **Ajouter une clé → JSON** (un fichier `.json` se télécharge).
-4. Créer (ou dupliquer) un **Google Sheet de test** dont la **1re ligne = les 39 en-têtes**
-   exacts (cf. `SHEET_COLUMNS` dans `src/shared/config.js`). Noter son **id** (dans l'URL).
+4. Créer (ou dupliquer) un **Google Sheet de test** dont la **1re ligne** reprend, à partir de
+   la **colonne A**, les en-têtes de `FORM_COLUMNS` (`src/shared/config.js`) — ce sont les seules
+   colonnes écrites par le site. Ajouter **à droite**, à la main, les colonnes de suivi
+   (`MANUAL_COLUMNS` : CERTIF MÉD, PHOTO, ABANDON, Grade…). Noter l'**id** du Sheet (dans l'URL).
 5. **Partager** ce Sheet (bouton *Partager*, accès **Éditeur**) avec l'email du compte de
    service (`…@…iam.gserviceaccount.com`).
 
@@ -163,9 +165,6 @@ Mettre la même URL publique dans `SITE_URL`. Parcours de test :
   remise est répartie pour que le cumul = le barème (appliqué une seule fois). ⚠️ **Déclaratif** :
   repose sur l'honnêteté de la saisie ; le bureau peut recouper via le nom de famille dans le Sheet.
 - **Montants des aides** PEPS / Pass'Sport (`AIDS`) — à confirmer chaque saison.
-- **Liste des grades Shidokan** (`GRADES_SHIDOKAN`) — liste générique, à remplacer par celle du club.
-- **Champ « État/Région »** — obligatoire dans le Jotform mais sans colonne dans le Sheet : à
-  trancher (ajouter le champ + une colonne, ou l'omettre).
 - **Cardio Budo = discipline de contact ?** (`DISCIPLINES.cardio.contact`) — défaut : non.
 - **Colonnes ambiguës** : `Règlement intérieur` (auto) vs `REGLEMENT` (bureau) ; doublon
   éventuel `Documents coupon sport` vs `PEPS`/`PASS'SPORT`.
