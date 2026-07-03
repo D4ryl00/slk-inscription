@@ -26,7 +26,7 @@
             <label>Prénom<input name="prenom" required /></label>
             <label>Nom<input name="nom" required /></label>
             <label>Date de naissance<input type="date" name="dateNaissance" required /></label>
-            <label>Lieu de naissance<input name="lieuNaissance" /></label>
+            <label>Lieu de naissance<input name="lieuNaissance" required /></label>
           </div>
           <label>Nom des parents (si différent de l'enfant)
             <input name="nomParents" />
@@ -37,24 +37,24 @@
         <section class="card">
           <h2>2. Coordonnées</h2>
           <div class="grid2">
-            <label class="col2">Adresse — numéro et rue<input name="adresse_numeroRue" /></label>
+            <label class="col2">Adresse — numéro et rue<input name="adresse_numeroRue" required /></label>
             <label class="col2">Complément d'adresse<input name="adresse_complement" /></label>
-            <label>Ville<input name="adresse_ville" /></label>
-            <label>Code postal<input name="adresse_codePostal" inputmode="numeric" /></label>
-            <label>Pays<input name="adresse_pays" value="France" /></label>
+            <label>Ville<input name="adresse_ville" required /></label>
+            <label>Code postal<input name="adresse_codePostal" inputmode="numeric" required /></label>
+            <label>Pays<input name="adresse_pays" value="France" required /></label>
             <label>Email<input type="email" name="email" required /></label>
-            <label>Numéro de téléphone<input name="telephone" inputmode="tel" /></label>
+            <label>Numéro de téléphone<input name="telephone" inputmode="tel" required /></label>
           </div>
           <fieldset class="inline">
             <legend>Acceptez-vous de paraître sur les réseaux sociaux (manifestations du club) ?</legend>
-            <label><input type="radio" name="reseauxSociaux" value="Oui" /> Oui</label>
+            <label><input type="radio" name="reseauxSociaux" value="Oui" required /> Oui</label>
             <label><input type="radio" name="reseauxSociaux" value="Non" /> Non</label>
           </fieldset>
           <h3>Contact de confiance</h3>
           <div class="grid2">
-            <label>Prénom<input name="cc_prenom" /></label>
-            <label>Nom<input name="cc_nom" /></label>
-            <label>Téléphone<input name="cc_telephone" inputmode="tel" /></label>
+            <label>Prénom<input name="cc_prenom" required /></label>
+            <label>Nom<input name="cc_nom" required /></label>
+            <label>Téléphone<input name="cc_telephone" inputmode="tel" required /></label>
           </div>
         </section>
 
@@ -74,8 +74,17 @@
             </fieldset>
           </div>
 
-          <label>Grade Shidokan (le cas échéant)<input name="gradeShidokan" /></label>
-          <label>Quelles sont vos motivations ?<textarea name="motivations" rows="3"></textarea></label>
+          <!-- Champs conditionnels à la section Karaté (remplis dynamiquement) -->
+          <div id="karateFields" class="hidden">
+            <label>Grade Shidokan
+              <select name="gradeShidokan" id="gradeShidokan">
+                <option value="" disabled selected>— Sélectionnez votre grade —</option>
+              </select>
+            </label>
+            <fieldset class="inline" id="motivationsField">
+              <legend>Quelles sont vos motivations ?</legend>
+            </fieldset>
+          </div>
 
           <fieldset class="inline">
             <legend>Mode de règlement</legend>

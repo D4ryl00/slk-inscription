@@ -101,15 +101,52 @@ export const AIDS = {
 };
 
 /**
- * Réduction famille. ⚠️ FORMULE À DÉFINIR AVEC LE CLUB.
- * Implémentation par défaut : aucune remise (rate = 0). Structure prête à
- * brancher une règle (ex. -10 % dès le 2e membre d'une même famille).
+ * Réduction famille — forfait selon le NOMBRE TOTAL de membres du foyer.
+ * Source : formulaire Jotform 2025-2026.
+ *   2 membres → −50 € · 3 → −70 € · 4 (et +) → −100 €
+ *
+ * ⚠️ Ce forfait s'applique UNE FOIS pour toute la famille. Il ne peut donc être
+ * appliqué correctement que sur une commande couvrant TOUS les membres (un seul
+ * paiement pour N adhérents). En flux « un adhérent = un paiement », laisser
+ * `enabled: false` pour éviter de déduire le forfait plusieurs fois.
  */
 export const FAMILY_DISCOUNT = {
-  enabled: false, // passer à true une fois la règle validée
-  ratePerExtraMember: 0, // ex. 0.10 pour -10 % par membre supplémentaire
-  maxRate: 0, // plafond de remise
+  enabled: false, // → true une fois le panier multi-adhérents en place
+  tiers: [
+    { members: 2, discount: 50 },
+    { members: 3, discount: 70 },
+    { members: 4, discount: 100 }, // 4 membres ou plus
+  ],
 };
+
+/** Remise famille (euros) pour un nombre de membres donné. */
+export function familyDiscountEuros(members) {
+  if (!FAMILY_DISCOUNT.enabled) return 0;
+  let discount = 0;
+  for (const t of FAMILY_DISCOUNT.tiers) if (members >= t.members) discount = t.discount;
+  return discount;
+}
+
+/**
+ * Grades Shidokan (liste déroulante conditionnelle à la section Karaté).
+ * ⚠️ À CONFIRMER : liste exacte des grades du club.
+ */
+export const GRADES_SHIDOKAN = [
+  'Ceinture blanche',
+  'Ceinture jaune',
+  'Ceinture orange',
+  'Ceinture verte',
+  'Ceinture bleue',
+  'Ceinture marron',
+  'Ceinture noire',
+];
+
+/** Motivations proposées (radio conditionnel à la section Karaté). */
+export const MOTIVATIONS = [
+  'Sport Loisir',
+  'Karaté loisir ceinture noire',
+  'Compétition',
+];
 
 /**
  * En-têtes EXACTS du Google Sheet, dans l'ordre.

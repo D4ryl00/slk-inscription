@@ -1,7 +1,14 @@
 // Logique du formulaire : remplissage dynamique, prix en direct, checklist de
 // pièces conditionnelle, envoi vers /api/create-checkout puis redirection.
 
-import { AIDS, CARDIO_DAYS, OFFERS, getOffer } from './shared/config.js';
+import {
+  AIDS,
+  CARDIO_DAYS,
+  GRADES_SHIDOKAN,
+  MOTIVATIONS,
+  OFFERS,
+  getOffer,
+} from './shared/config.js';
 import { computePrice, formatEuros } from './shared/pricing.js';
 import { isMinorFromBirthdate, requiredDocuments } from './shared/docs.js';
 
@@ -26,6 +33,28 @@ for (const day of CARDIO_DAYS) {
   label.className = 'chip';
   label.innerHTML = `<input type="checkbox" name="cardioJours" value="${day}" id="${id}" /> ${day}`;
   cardioDays.appendChild(label);
+}
+
+// --- Champs conditionnels à Karaté : grade + motivations --------------------
+const karateFields = $('#karateFields');
+const gradeSelect = $('#gradeShidokan');
+for (const g of GRADES_SHIDOKAN) {
+  const opt = document.createElement('option');
+  opt.value = g;
+  opt.textContent = g;
+  gradeSelect.appendChild(opt);
+}
+const motivationsField = $('#motivationsField');
+for (const m of MOTIVATIONS) {
+  const label = document.createElement('label');
+  label.innerHTML = `<input type="radio" name="motivations" value="${m}" /> ${m}`;
+  motivationsField.appendChild(label);
+}
+
+function setRequired(container, required) {
+  container.querySelectorAll('input, select').forEach((el) => {
+    el.required = required;
+  });
 }
 
 // --- Aide : afficher le champ code si une aide est choisie -------------------
@@ -78,9 +107,14 @@ function readForm() {
 function refresh() {
   const s = readForm();
   const offer = getOffer(s.offerId);
+  const isCardio = Boolean(offer && offer.disciplines.includes('cardio'));
+  const isKarate = Boolean(offer && offer.disciplines.includes('karate'));
 
   // Jours Cardio uniquement pour les formules cardio
-  cardioWrap.classList.toggle('hidden', !(offer && offer.disciplines.includes('cardio')));
+  cardioWrap.classList.toggle('hidden', !isCardio);
+  // Grade + motivations uniquement pour les formules Karaté
+  karateFields.classList.toggle('hidden', !isKarate);
+  setRequired(karateFields, isKarate);
 
   // Prix
   const price = computePrice({
@@ -132,6 +166,14 @@ form.addEventListener('submit', async (e) => {
   if (!form.reportValidity()) return;
 
   const s = readForm();
+
+  // Validation « au moins un jour » pour le Cardio-Budo (non gérable en HTML natif)
+  const offer = getOffer(s.offerId);
+  if (offer && offer.disciplines.includes('cardio') && s.cardioJours.length === 0) {
+    errorEl.textContent = 'Sélectionnez au moins un jour pour le Cardio-Budo.';
+    return;
+  }
+
   const btn = $('#submitBtn');
   btn.disabled = true;
   btn.textContent = 'Redirection vers le paiement…';

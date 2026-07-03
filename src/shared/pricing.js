@@ -6,6 +6,7 @@ import {
   AIDS,
   FAMILY_DISCOUNT,
   PAYMENT_PLANS,
+  familyDiscountEuros,
   getOffer,
 } from './config.js';
 
@@ -39,15 +40,11 @@ export function computePrice(selection) {
 
   const baseCents = toCents(offer.priceAnnual);
 
-  // --- Réduction famille (désactivée par défaut, cf. config) -----------------
+  // --- Réduction famille (forfait par nombre de membres, cf. config) ---------
+  // ⚠️ N'est appliquée que si FAMILY_DISCOUNT.enabled (panier multi-adhérents).
   let familyDiscountCents = 0;
   if (FAMILY_DISCOUNT.enabled) {
-    const extra = Math.max(0, (selection.familyMembers || 1) - 1);
-    const rate = Math.min(
-      FAMILY_DISCOUNT.maxRate,
-      extra * FAMILY_DISCOUNT.ratePerExtraMember,
-    );
-    familyDiscountCents = Math.round(baseCents * rate);
+    familyDiscountCents = toCents(familyDiscountEuros(selection.familyMembers || 1));
   }
 
   // --- Aide (PEPS / Pass'Sport), déduite uniquement si un code est saisi ------
