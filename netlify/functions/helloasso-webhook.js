@@ -6,7 +6,8 @@
 // tempête de retries ; l'écriture ne se fait que si le paiement est confirmé.
 
 import { getStore } from '@netlify/blobs';
-import { getCheckoutIntent, isCheckoutPaid } from './lib/helloasso.js';
+import { extractPaymentReference, getCheckoutIntent, isCheckoutPaid } from './lib/helloasso.js';
+import { extractMemberId } from './lib/webhook-utils.js';
 import { appendRow, columnContains } from './lib/google.js';
 import { PAIEMENT_COL_INDEX, buildSheetRow } from '../../src/shared/sheet-row.js';
 
@@ -20,9 +21,7 @@ export default async (req) => {
     return new Response('Corps invalide', { status: 400 });
   }
 
-  // metadata peut être à la racine ou sous data selon l'événement.
-  const metadata = payload?.metadata || payload?.data?.metadata || {};
-  const memberId = metadata.memberId;
+  const memberId = extractMemberId(payload);
   if (!memberId) return ack('notification sans memberId (ignorée)');
 
   const store = getStore('submissions');
@@ -46,7 +45,7 @@ export default async (req) => {
   if (!isCheckoutPaid(intent)) return ack('paiement non confirmé');
 
   const order = intent.order || {};
-  const paymentId = String(order.id ?? order.payments?.[0]?.id ?? record.checkoutIntentId);
+  const paymentId = extractPaymentReference(intent) || String(record.checkoutIntentId);
 
   // --- Déduplication (webhook rejoué) -----------------------------------------
   try {

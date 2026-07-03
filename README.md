@@ -80,7 +80,7 @@ mêmes clés se renseignent dans **Netlify → Site configuration → Environmen
 
 ```bash
 npm install
-npm test          # doit afficher 6 tests verts
+npm test          # tests prix + webhook (doivent être verts)
 npm run dev       # netlify dev → http://localhost:8888
 ```
 
@@ -172,8 +172,8 @@ Mettre la même URL publique dans `SITE_URL`. Parcours de test :
   remise est répartie pour que le cumul = le barème (appliqué une seule fois). ⚠️ **Déclaratif** :
   repose sur l'honnêteté de la saisie ; le bureau peut recouper via le nom de famille dans le Sheet.
 - **Montants des aides** (`AIDS`) — Pass'Sport 70 €, PEPS 30 € (à revérifier chaque saison).
-- **Moyens de paiement hors ligne** (`PAYMENT_METHODS`) — chèque, chèques vacances, espèces ;
-  ajouter « Prime Enfant » si nécessaire.
+  Le PEPS est aussi appelé « Prime Enfant ».
+- **Moyens de paiement hors ligne** (`PAYMENT_METHODS`) — chèque, chèques vacances, espèces.
 - **Cardio Budo = discipline de contact ?** (`DISCIPLINES.cardio.contact`) — défaut : non.
 - **Colonnes ambiguës** : `Règlement intérieur` (auto) vs `REGLEMENT` (bureau) ; doublon
   éventuel `Documents coupon sport` vs `PEPS`/`PASS'SPORT`.

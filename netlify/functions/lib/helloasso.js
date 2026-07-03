@@ -95,18 +95,28 @@ export async function getCheckoutIntent(checkoutIntentId) {
   return res.json();
 }
 
+/** États d'un paiement HelloAsso considérés comme réellement encaissés. */
+export const PAID_STATES = ['Authorized', 'Registered'];
+
 /**
- * Vrai si le checkout-intent correspond à une commande réellement autorisée/payée.
- * HelloAsso renvoie un objet `order` une fois le paiement effectué.
+ * Vrai si le checkout-intent correspond à un paiement réellement encaissé.
+ * On EXIGE au moins un paiement dans un état valide (Authorized/Registered) ;
+ * un paiement Pending/Refused/Refunded/Unknown ne compte pas.
  */
 export function isCheckoutPaid(checkoutIntent) {
+  const payments = checkoutIntent?.order?.payments || [];
+  return payments.some((p) => PAID_STATES.includes(p.state));
+}
+
+/**
+ * Référence de paiement pour la déduplication : id de la commande de préférence,
+ * sinon id du 1er paiement. Renvoie une chaîne, ou null si aucune commande.
+ */
+export function extractPaymentReference(checkoutIntent) {
   const order = checkoutIntent?.order;
-  if (!order) return false;
-  // Une commande existe → paiement initié/autorisé. On regarde les paiements.
-  const payments = order.payments || [];
-  return payments.some((pay) =>
-    ['Authorized', 'Registered'].includes(pay.state),
-  ) || payments.length > 0;
+  if (!order) return null;
+  const ref = order.id ?? order.payments?.[0]?.id;
+  return ref != null ? String(ref) : null;
 }
 
 async function safeText(res) {

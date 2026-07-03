@@ -93,7 +93,8 @@ export const AIDS = {
     column: "PASS'SPORT",
   },
   peps: {
-    label: 'PEPS',
+    // Le PEPS est aussi appelé « Prime Enfant » (c'est une aide, pas un moyen de paiement).
+    label: 'PEPS (Prime Enfant)',
     amount: 30,
     requiresCode: true,
     column: 'PEPS',
@@ -104,7 +105,7 @@ export const AIDS = {
  * Moyens de paiement HORS LIGNE (encaissés au bureau). Le montant saisi pour
  * chacun est DÉDUIT de ce qui reste à payer en CB sur HelloAsso. Si le total
  * hors ligne couvre toute la cotisation, aucun paiement en ligne n'a lieu.
- * ⚠️ À CONFIRMER la liste (ex. « Prime Enfant » à ajouter ?).
+ * NB : « Prime Enfant » n'est pas un moyen de paiement — c'est l'aide PEPS (cf. AIDS).
  */
 export const PAYMENT_METHODS = {
   cheque: { label: 'Chèque(s)' },
