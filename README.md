@@ -64,6 +64,7 @@ mêmes clés se renseignent dans **Netlify → Site configuration → Environmen
 | `HELLOASSO_CLIENT_ID` / `HELLOASSO_CLIENT_SECRET` | Client API HelloAsso (back-office) |
 | `HELLOASSO_ORG_SLUG` | slug de l'organisation (dans l'URL HelloAsso) |
 | `HELLOASSO_ENV` | `sandbox` (tests) ou `prod` |
+| `HELLOASSO_WEBHOOK_SIGNATURE_KEY` | *(optionnel, partenaires)* vérifie la signature `x-ha-signature` du webhook |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | JSON de la clé du compte de service (ou `base64:…`) |
 | `GOOGLE_SHEET_ID` | id du Sheet (entre `/d/` et `/edit` dans l'URL) |
 | `GOOGLE_SHEET_TAB` | nom de l'onglet (défaut « Feuille 1 ») |

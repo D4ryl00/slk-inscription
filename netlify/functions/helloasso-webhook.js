@@ -7,18 +7,36 @@
 
 import { getStore } from '@netlify/blobs';
 import { extractPaymentReference, getCheckoutIntent, isCheckoutPaid } from './lib/helloasso.js';
-import { extractMemberId } from './lib/webhook-utils.js';
+import { extractMemberId, verifyHelloAssoSignature } from './lib/webhook-utils.js';
 import { appendRow, columnContains } from './lib/google.js';
 import { PAIEMENT_COL_INDEX, buildSheetRow } from '../../src/shared/sheet-row.js';
 
 export default async (req) => {
   if (req.method !== 'POST') return new Response('Méthode non autorisée', { status: 405 });
 
-  let payload;
+  // Lire le corps BRUT (nécessaire pour vérifier la signature HMAC).
+  let raw;
   try {
-    payload = await req.json();
+    raw = await req.text();
   } catch {
     return new Response('Corps invalide', { status: 400 });
+  }
+
+  // Vérification de signature — uniquement si une clé est configurée (partenaire).
+  const sigKey = process.env.HELLOASSO_WEBHOOK_SIGNATURE_KEY;
+  if (sigKey) {
+    const sig = req.headers.get('x-ha-signature');
+    if (!verifyHelloAssoSignature(raw, sig, sigKey)) {
+      console.warn('webhook: signature invalide/absente → rejet');
+      return new Response('Signature invalide', { status: 401 });
+    }
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(raw);
+  } catch {
+    return new Response('JSON invalide', { status: 400 });
   }
 
   const memberId = extractMemberId(payload);

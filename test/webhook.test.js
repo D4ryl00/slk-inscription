@@ -3,6 +3,7 @@
 // checkout-intent relu via l'API (états de paiement, référence).
 
 import assert from 'node:assert/strict';
+import { createHmac } from 'node:crypto';
 import { test } from 'node:test';
 
 import {
@@ -10,7 +11,7 @@ import {
   extractPaymentReference,
   isCheckoutPaid,
 } from '../netlify/functions/lib/helloasso.js';
-import { extractMemberId } from '../netlify/functions/lib/webhook-utils.js';
+import { extractMemberId, verifyHelloAssoSignature } from '../netlify/functions/lib/webhook-utils.js';
 
 // --- extractMemberId : format de notification ---------------------------------
 
@@ -81,4 +82,32 @@ test('extractPaymentReference : repli sur le 1er paiement, sinon null', () => {
   assert.equal(extractPaymentReference({ order: {} }), null);
   assert.equal(extractPaymentReference({}), null);
   assert.equal(extractPaymentReference(null), null);
+});
+
+// --- verifyHelloAssoSignature : authenticité (HMAC-SHA256 hex) -----------------
+
+const SIG_KEY = 'test-signature-key';
+const SIG_BODY = '{"eventType":"Payment","metadata":{"memberId":"abc"}}';
+const sign = (body, key) => createHmac('sha256', key).update(body, 'utf8').digest('hex');
+
+test('verifyHelloAssoSignature : signature correcte → true', () => {
+  assert.equal(verifyHelloAssoSignature(SIG_BODY, sign(SIG_BODY, SIG_KEY), SIG_KEY), true);
+});
+
+test('verifyHelloAssoSignature : corps altéré → false', () => {
+  assert.equal(verifyHelloAssoSignature(SIG_BODY + ' ', sign(SIG_BODY, SIG_KEY), SIG_KEY), false);
+});
+
+test('verifyHelloAssoSignature : mauvaise clé → false', () => {
+  assert.equal(verifyHelloAssoSignature(SIG_BODY, sign(SIG_BODY, 'autre-cle'), SIG_KEY), false);
+});
+
+test('verifyHelloAssoSignature : signature absente ou clé absente → false', () => {
+  assert.equal(verifyHelloAssoSignature(SIG_BODY, '', SIG_KEY), false);
+  assert.equal(verifyHelloAssoSignature(SIG_BODY, undefined, SIG_KEY), false);
+  assert.equal(verifyHelloAssoSignature(SIG_BODY, sign(SIG_BODY, SIG_KEY), ''), false);
+});
+
+test('verifyHelloAssoSignature : longueur différente → false (sans exception)', () => {
+  assert.equal(verifyHelloAssoSignature(SIG_BODY, 'deadbeef', SIG_KEY), false);
 });
