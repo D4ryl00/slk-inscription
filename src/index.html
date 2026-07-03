@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Adhésion — Stade Laurentin Karaté Shidokan</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <header class="head">
+        <h1>Adhésion SLK 2025-2026</h1>
+        <p class="sub">Stade Laurentin Karaté Shidokan — inscription &amp; paiement en ligne</p>
+      </header>
+
+      <form id="form" novalidate>
+        <!-- ── Adhérent ─────────────────────────────────────────────── -->
+        <section class="card">
+          <h2>1. L'adhérent</h2>
+          <fieldset class="inline">
+            <legend>Nouvel adhérent ?</legend>
+            <label><input type="radio" name="nouvelAdherent" value="Oui" required /> Oui</label>
+            <label><input type="radio" name="nouvelAdherent" value="Non" /> Non (renouvellement)</label>
+          </fieldset>
+          <div class="grid2">
+            <label>Prénom<input name="prenom" required /></label>
+            <label>Nom<input name="nom" required /></label>
+            <label>Date de naissance<input type="date" name="dateNaissance" required /></label>
+            <label>Lieu de naissance<input name="lieuNaissance" /></label>
+          </div>
+          <label>Nom des parents (si différent de l'enfant)
+            <input name="nomParents" />
+          </label>
+        </section>
+
+        <!-- ── Coordonnées ──────────────────────────────────────────── -->
+        <section class="card">
+          <h2>2. Coordonnées</h2>
+          <div class="grid2">
+            <label class="col2">Adresse — numéro et rue<input name="adresse_numeroRue" /></label>
+            <label class="col2">Complément d'adresse<input name="adresse_complement" /></label>
+            <label>Ville<input name="adresse_ville" /></label>
+            <label>Code postal<input name="adresse_codePostal" inputmode="numeric" /></label>
+            <label>Pays<input name="adresse_pays" value="France" /></label>
+            <label>Email<input type="email" name="email" required /></label>
+            <label>Numéro de téléphone<input name="telephone" inputmode="tel" /></label>
+          </div>
+          <fieldset class="inline">
+            <legend>Acceptez-vous de paraître sur les réseaux sociaux (manifestations du club) ?</legend>
+            <label><input type="radio" name="reseauxSociaux" value="Oui" /> Oui</label>
+            <label><input type="radio" name="reseauxSociaux" value="Non" /> Non</label>
+          </fieldset>
+          <h3>Contact de confiance</h3>
+          <div class="grid2">
+            <label>Prénom<input name="cc_prenom" /></label>
+            <label>Nom<input name="cc_nom" /></label>
+            <label>Téléphone<input name="cc_telephone" inputmode="tel" /></label>
+          </div>
+        </section>
+
+        <!-- ── Adhésion ─────────────────────────────────────────────── -->
+        <section class="card">
+          <h2>3. Choix de l'adhésion</h2>
+          <label>Formule
+            <select name="offerId" id="offerId" required>
+              <option value="" disabled selected>— Sélectionnez une formule —</option>
+            </select>
+          </label>
+
+          <div id="cardioDaysWrap" class="hidden">
+            <fieldset>
+              <legend>Cardio-Budo — sélectionnez votre/vos jour(s)</legend>
+              <div id="cardioDays" class="chips"></div>
+            </fieldset>
+          </div>
+
+          <label>Grade Shidokan (le cas échéant)<input name="gradeShidokan" /></label>
+          <label>Quelles sont vos motivations ?<textarea name="motivations" rows="3"></textarea></label>
+
+          <fieldset class="inline">
+            <legend>Mode de règlement</legend>
+            <label><input type="radio" name="paymentPlan" value="1x" checked /> En 1 fois</label>
+            <label><input type="radio" name="paymentPlan" value="3x" /> En 3 fois</label>
+          </fieldset>
+
+          <fieldset>
+            <legend>Aide financière (optionnel)</legend>
+            <label>Type d'aide
+              <select name="aidType" id="aidType">
+                <option value="">Aucune</option>
+                <option value="passsport">Pass'Sport</option>
+                <option value="peps">PEPS</option>
+              </select>
+            </label>
+            <label id="aidCodeWrap" class="hidden">Code / référence de l'aide
+              <input name="aidCode" id="aidCode" />
+            </label>
+            <p class="hint">Le montant de l'aide est déduit du total. Vous devrez rapporter le justificatif au bureau.</p>
+          </fieldset>
+        </section>
+
+        <!-- ── Pièces à rapporter ───────────────────────────────────── -->
+        <section class="card" id="docsCard">
+          <h2>4. Pièces à rapporter au bureau</h2>
+          <p class="hint">Aucun document n'est à envoyer en ligne. Apportez-les au bureau du club.</p>
+          <ul id="docsList" class="docs"></ul>
+        </section>
+
+        <!-- ── Récapitulatif & consentements ────────────────────────── -->
+        <section class="card">
+          <h2>5. Récapitulatif</h2>
+          <div id="priceBox" class="price">
+            <div class="price-line"><span>Total</span><strong id="priceTotal">—</strong></div>
+            <div id="priceDetail" class="price-detail"></div>
+          </div>
+
+          <label class="check"><input type="checkbox" name="reglementInterieur" required />
+            J'accepte le règlement intérieur du club.</label>
+          <label class="check"><input type="checkbox" name="rgpdConsent" required />
+            J'accepte que mes données soient traitées pour la gestion de mon adhésion (RGPD).</label>
+          <label class="check"><input type="checkbox" name="engagementPieces" required />
+            Je m'engage à rapporter les pièces demandées au bureau du club.</label>
+
+          <p id="formError" class="error" role="alert"></p>
+          <button type="submit" id="submitBtn">Payer et m'inscrire</button>
+          <p class="hint">Paiement sécurisé par carte bancaire via HelloAsso.</p>
+        </section>
+      </form>
+    </main>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

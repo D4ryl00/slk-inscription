@@ -1,0 +1,26 @@
+# Configuration Netlify — front statique (Vite) + fonctions serverless
+[build]
+  command = "vite build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[functions]
+  # Bundler moderne (ESM) pour les fonctions
+  node_bundler = "esbuild"
+
+[dev]
+  command = "vite"
+  targetPort = 5173
+  framework = "#custom"
+
+# Le webhook HelloAsso poste sur cette route (URL à déclarer côté HelloAsso).
+# Alias plus lisible vers la fonction.
+[[redirects]]
+  from = "/api/helloasso-webhook"
+  to = "/.netlify/functions/helloasso-webhook"
+  status = 200
+
+[[redirects]]
+  from = "/api/create-checkout"
+  to = "/.netlify/functions/create-checkout"
+  status = 200
