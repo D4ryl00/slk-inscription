@@ -30,7 +30,23 @@ export const DOC_LINKS = {
 export function requiredDocuments({ isMinor, offerId, aid } = {}) {
   const offer = getOffer(offerId);
   const contact = offerIsContact(offer);
+  const disciplines = offer?.disciplines || [];
+  const hasKarate = disciplines.includes('karate');
+  const hasStriking = disciplines.includes('boxing') || disciplines.includes('mma');
   const docs = [];
+
+  // Photo d'identité : obligatoire pour le karaté ; pour le Shido-Boxing et le
+  // Shido-Mix-Martial, uniquement pour les compétiteurs.
+  if (hasKarate || hasStriking) {
+    docs.push({
+      id: 'photo-identite',
+      label: "1 photo d'identité",
+      help: hasKarate
+        ? 'Obligatoire pour le karaté.' +
+          (hasStriking ? ' (Également requise pour les compétiteurs en Shido-Boxing / Shido-Mix-Martial.)' : '')
+        : 'Obligatoire pour les compétiteurs en Shido-Boxing / Shido-Mix-Martial.',
+    });
+  }
 
   if (isMinor) {
     docs.push({
