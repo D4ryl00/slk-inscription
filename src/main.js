@@ -226,6 +226,9 @@ function refresh() {
     list.innerHTML = '<li class="muted">Renseignez la date de naissance et la formule pour voir les pièces à rapporter.</li>';
   } else {
     const docs = requiredDocuments({ isMinor: minor, offerId: s.offerId, aid: s.aid });
+    if (!docs.length) {
+      list.innerHTML = '<li class="muted">Aucune pièce particulière à rapporter pour cette formule.</li>';
+    }
     for (const d of docs) {
       const li = document.createElement('li');
       const link = d.link ? ` <a href="${d.link}" target="_blank" rel="noopener">${d.linkLabel || 'document'}</a>` : '';

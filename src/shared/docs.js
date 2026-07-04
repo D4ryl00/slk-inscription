@@ -77,13 +77,15 @@ export function requiredDocuments({ isMinor, offerId, aid } = {}) {
       link: DOC_LINKS.noteCertificatMedical,
       linkLabel: 'Note FFKarate 2025-2026',
     });
-  } else {
+  } else if (hasKarate || hasStriking) {
+    // Majeurs : le certificat médical n'est obligatoire QUE pour les compétiteurs
+    // (en loisir, aucun certificat n'est requis).
     docs.push({
       id: 'certificat-medical',
-      label: 'Certificat médical de non contre-indication',
+      label: 'Compétiteurs : certificat médical de non contre-indication',
       help:
-        'Obligatoire pour les majeurs. <strong>Obligatoire pour tous les compétiteurs</strong> : ' +
-        'le certificat doit alors mentionner explicitement la pratique <strong>en compétition</strong>.',
+        'Obligatoire <strong>uniquement pour les compétiteurs</strong> — en loisir, aucun certificat ' +
+        'n\'est requis. Le certificat doit mentionner explicitement la pratique <strong>en compétition</strong>.',
       link: DOC_LINKS.noteCertificatMedical,
       linkLabel: 'Note FFKarate 2025-2026',
     });
