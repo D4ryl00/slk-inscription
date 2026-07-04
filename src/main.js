@@ -45,16 +45,51 @@ for (const g of GRADES_SHIDOKAN) {
   opt.textContent = g;
   gradeSelect.appendChild(opt);
 }
-const motivationsField = $('#motivationsField');
+const motivationsWrap = $('#motivations');
 for (const m of MOTIVATIONS) {
   const label = document.createElement('label');
-  label.innerHTML = `<input type="radio" name="motivations" value="${m}" /> ${m}`;
-  motivationsField.appendChild(label);
+  label.className = 'chip';
+  label.innerHTML = `<input type="checkbox" name="motivations" value="${m}" /> ${m}`;
+  motivationsWrap.appendChild(label);
 }
 
 function setRequired(container, required) {
   container.querySelectorAll('input, select').forEach((el) => {
     el.required = required;
+  });
+}
+
+// --- Astérisque rouge sur les champs obligatoires ---------------------------
+// Recalculé à chaque refresh() car certains champs deviennent obligatoires
+// dynamiquement (grade/motivations pour le Karaté, code d'aide pour Pass'Sport).
+function addMark(anchor, mode) {
+  const span = document.createElement('span');
+  span.className = 'req';
+  span.setAttribute('aria-hidden', 'true');
+  span.textContent = ' *';
+  if (mode === 'before') anchor.parentNode.insertBefore(span, anchor);
+  else anchor.appendChild(span);
+}
+
+function updateRequiredMarks() {
+  form.querySelectorAll('.req').forEach((el) => el.remove());
+
+  form.querySelectorAll('label').forEach((label) => {
+    const ctrl = label.querySelector(':scope > input, :scope > select, :scope > textarea');
+    if (!ctrl || !ctrl.required) return;
+    const isBox = ctrl.type === 'checkbox' || ctrl.type === 'radio';
+    // Radios/cases groupés dans un fieldset → astérisque porté par la légende.
+    if (isBox && label.closest('fieldset')) return;
+    // Case à cocher (consentements) : libellé après la case → astérisque à la fin.
+    // Champ texte/select : « Libellé * » juste avant le contrôle.
+    addMark(isBox ? label : ctrl, isBox ? 'append' : 'before');
+  });
+
+  // Groupes radio/case obligatoires → astérisque sur la légende du fieldset.
+  form.querySelectorAll('fieldset').forEach((fs) => {
+    const legend = fs.querySelector('legend');
+    const grouped = fs.querySelector('input[type="radio"]:required, input[type="checkbox"]:required');
+    if (legend && grouped) addMark(legend, 'append');
   });
 }
 
@@ -81,8 +116,11 @@ function readOfflinePayments(fd) {
 const aidType = $('#aidType');
 const aidCodeWrap = $('#aidCodeWrap');
 aidType.addEventListener('change', () => {
-  aidCodeWrap.classList.toggle('hidden', !aidType.value);
-  $('#aidCode').required = Boolean(aidType.value);
+  // Le code n'est demandé que pour les aides qui l'exigent (Pass'Sport).
+  // Pour le PEPS, pas de code en ligne : le formulaire est rapporté au bureau.
+  const needsCode = Boolean(AIDS[aidType.value]?.requiresCode);
+  aidCodeWrap.classList.toggle('hidden', !needsCode);
+  $('#aidCode').required = needsCode;
   refresh();
 });
 
@@ -100,7 +138,6 @@ function readForm() {
       numeroRue: (fd.get('adresse_numeroRue') || '').trim(),
       complement: (fd.get('adresse_complement') || '').trim(),
       ville: (fd.get('adresse_ville') || '').trim(),
-      etatRegion: (fd.get('adresse_etatRegion') || '').trim(),
       codePostal: (fd.get('adresse_codePostal') || '').trim(),
       pays: (fd.get('adresse_pays') || '').trim(),
     },
@@ -113,7 +150,7 @@ function readForm() {
       telephone: (fd.get('cc_telephone') || '').trim(),
     },
     offerId: fd.get('offerId') || '',
-    motivations: (fd.get('motivations') || '').trim(),
+    motivations: fd.getAll('motivations'),
     gradeShidokan: (fd.get('gradeShidokan') || '').trim(),
     cardioJours: fd.getAll('cardioJours'),
     familyAlreadyRegistered: parseInt(fd.get('familyAlreadyRegistered') || '0', 10) || 0,
@@ -138,6 +175,8 @@ function refresh() {
   // Grade + motivations uniquement pour les formules Karaté
   karateFields.classList.toggle('hidden', !isKarate);
   setRequired(karateFields, isKarate);
+  // Motivations : choix multiple → jamais « required » individuellement.
+  motivationsWrap.querySelectorAll('input').forEach((el) => { el.required = false; });
 
   // Prix
   const price = computePrice({
@@ -192,6 +231,8 @@ function refresh() {
       list.appendChild(li);
     }
   }
+
+  updateRequiredMarks();
 }
 
 form.addEventListener('input', refresh);

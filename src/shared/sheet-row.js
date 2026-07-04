@@ -50,7 +50,8 @@ export function buildSheetRow(s, pay) {
   const aidCell = (type) => {
     if (aid.type !== type) return '';
     const a = AIDS[type];
-    return `Déduit ${a ? a.amount + ' €' : ''} — code ${aid.code || '?'} — À VÉRIFIER`;
+    const codePart = a?.requiresCode ? ` — code ${aid.code || '?'}` : '';
+    return `Déduit ${a ? a.amount + ' €' : ''}${codePart} — À VÉRIFIER`;
   };
 
   // Ordre = FORM_COLUMNS.
@@ -65,7 +66,6 @@ export function buildSheetRow(s, pay) {
     addr.numeroRue || '',                                  // Adresse - Numéro et rue
     addr.complement || '',                                 // Adresse - Complément
     addr.ville || '',                                      // Adresse - Ville
-    addr.etatRegion || '',                                 // Adresse - État/Région
     addr.codePostal || '',                                 // Adresse - Code Postal
     addr.pays || '',                                       // Adresse - Pays
     s.email || '',                                         // Email
@@ -75,7 +75,7 @@ export function buildSheetRow(s, pay) {
     cc.nom || '',                                          // Contact confiance - Nom
     cc.telephone || '',                                    // Contact confiance - Téléphone
     sectionLabel,                                          // Section
-    s.motivations || '',                                   // Motivations
+    Array.isArray(s.motivations) ? s.motivations.join(', ') : (s.motivations || ''), // Motivations
     s.gradeShidokan || '',                                 // Grade Shidokan
     Array.isArray(s.cardioJours) ? s.cardioJours.join(', ') : (s.cardioJours || ''), // Cardio jours
     modeReglement,                                         // Mode de règlement

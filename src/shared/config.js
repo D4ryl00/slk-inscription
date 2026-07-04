@@ -39,13 +39,6 @@ export const OFFERS = [
     priceAnnual: 330,
   },
   {
-    id: 'mix-boxing-enfant',
-    label: 'Shido-Mix-Martial + Shido-Boxing — Enfant / Ado',
-    category: 'enfant',
-    disciplines: ['mma', 'boxing'],
-    priceAnnual: 265,
-  },
-  {
     id: 'mix-boxing-adulte',
     label: 'Shido-Mix-Martial + Shido-Boxing — Adulte',
     category: 'adulte',
@@ -94,9 +87,10 @@ export const AIDS = {
   },
   peps: {
     // Le PEPS est aussi appelé « Prime Enfant » (c'est une aide, pas un moyen de paiement).
+    // Pas de code en ligne : l'adhérent rapporte le formulaire PEPS + les pièces au bureau.
     label: 'PEPS (Prime Enfant)',
     amount: 30,
-    requiresCode: true,
+    requiresCode: false,
     column: 'PEPS',
   },
 };
@@ -176,7 +170,7 @@ export const GRADES_SHIDOKAN = [
   '6e Dan',
 ];
 
-/** Motivations proposées (radio conditionnel à la section Karaté). */
+/** Motivations proposées (cases à cocher, choix multiple, conditionnel à Karaté). */
 export const MOTIVATIONS = [
   'Sport Loisir',
   'Karaté loisir ceinture noire',
@@ -201,7 +195,6 @@ export const FORM_COLUMNS = [
   'Adresse - Numéro et rue',
   'Adresse - Complément d\'adresse',
   'Adresse - Ville',
-  'Adresse - État/Région',
   'Adresse - Code Postal',
   'Adresse - Pays',
   'Email',

@@ -22,13 +22,23 @@ test('déduction d\'aide avec code', () => {
   assert.equal(p.aidApplied.code, 'ABC123');
 });
 
-test('aide sans code → erreur', () => {
+test('aide à code obligatoire sans code → erreur (Pass\'Sport)', () => {
+  const p = computePrice({
+    offerId: 'cardio-1',
+    paymentPlan: '1x',
+    aid: { type: 'passsport', code: '' },
+  });
+  assert.equal(p.ok, false);
+});
+
+test('PEPS sans code → OK (le code n\'est plus demandé en ligne)', () => {
   const p = computePrice({
     offerId: 'cardio-1',
     paymentPlan: '1x',
     aid: { type: 'peps', code: '' },
   });
-  assert.equal(p.ok, false);
+  assert.equal(p.ok, true);
+  assert.equal(p.aidApplied.amountCents, AIDS.peps.amount * 100);
 });
 
 test('offre inconnue → erreur', () => {

@@ -40,7 +40,6 @@
             <label class="col2">Adresse — numéro et rue<input name="adresse_numeroRue" required /></label>
             <label class="col2">Complément d'adresse<input name="adresse_complement" /></label>
             <label>Ville<input name="adresse_ville" required /></label>
-            <label>État / Région<input name="adresse_etatRegion" required /></label>
             <label>Code postal<input name="adresse_codePostal" inputmode="numeric" required /></label>
             <label>Pays<input name="adresse_pays" value="France" required /></label>
             <label>Email<input type="email" name="email" required /></label>
@@ -82,8 +81,9 @@
                 <option value="" disabled selected>— Sélectionnez votre grade —</option>
               </select>
             </label>
-            <fieldset class="inline" id="motivationsField">
-              <legend>Quelles sont vos motivations ?</legend>
+            <fieldset id="motivationsField">
+              <legend>Quelles sont vos motivations ? <span class="muted">(plusieurs choix possibles)</span></legend>
+              <div id="motivations" class="chips"></div>
             </fieldset>
           </div>
 
@@ -139,9 +139,12 @@
           </div>
 
           <label class="check"><input type="checkbox" name="reglementInterieur" required />
-            J'accepte le règlement intérieur du club.</label>
+            J'ai lu et j'accepte le
+            <a href="https://drive.google.com/file/d/1ELuyGdrdGI1x90IA8JZjhJZe9HaK4GMH/view?usp=sharing" target="_blank" rel="noopener">règlement intérieur</a>
+            du club.</label>
           <label class="check"><input type="checkbox" name="rgpdConsent" required />
-            J'accepte que mes données soient traitées pour la gestion de mon adhésion (RGPD).</label>
+            J'accepte que mes données soient traitées pour la gestion de mon adhésion, conformément à la
+            <a href="https://drive.google.com/file/d/1pu5Ik1UrFg-7liK-Antcr9VyefySQjxN/view?usp=sharing" target="_blank" rel="noopener">politique de confidentialité (RGPD)</a>.</label>
           <label class="check"><input type="checkbox" name="engagementPieces" required />
             Je m'engage à rapporter les pièces demandées au bureau du club.</label>
 
