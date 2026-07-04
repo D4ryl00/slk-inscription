@@ -6,6 +6,7 @@ import {
   CARDIO_DAYS,
   GRADES_SHIDOKAN,
   MOTIVATIONS,
+  MOTIVATIONS_KARATE_ONLY,
   OFFERS,
   PAYMENT_METHODS,
   getOffer,
@@ -45,10 +46,12 @@ for (const g of GRADES_SHIDOKAN) {
   opt.textContent = g;
   gradeSelect.appendChild(opt);
 }
+const motivationsField = $('#motivationsField');
 const motivationsWrap = $('#motivations');
 for (const m of MOTIVATIONS) {
   const label = document.createElement('label');
   label.className = 'chip';
+  if (MOTIVATIONS_KARATE_ONLY.includes(m)) label.dataset.karateOnly = '1';
   label.innerHTML = `<input type="checkbox" name="motivations" value="${m}" /> ${m}`;
   motivationsWrap.appendChild(label);
 }
@@ -171,14 +174,27 @@ function refresh() {
   const offer = getOffer(s.offerId);
   const isCardio = Boolean(offer && offer.disciplines.includes('cardio'));
   const isKarate = Boolean(offer && offer.disciplines.includes('karate'));
+  const isStriking = Boolean(
+    offer && (offer.disciplines.includes('boxing') || offer.disciplines.includes('mma')),
+  );
 
   // Jours Cardio uniquement pour les formules cardio
   cardioWrap.classList.toggle('hidden', !isCardio);
-  // Grade + motivations uniquement pour les formules Karaté
+  // Grade uniquement pour les formules Karaté
   karateFields.classList.toggle('hidden', !isKarate);
   setRequired(karateFields, isKarate);
-  // Motivations : choix multiple → jamais « required » individuellement.
-  motivationsWrap.querySelectorAll('input').forEach((el) => { el.required = false; });
+
+  // Motivations : affichées pour Karaté ET Boxing/MMA (pas pour le Cardio).
+  const showMotivations = isKarate || isStriking;
+  motivationsField.classList.toggle('hidden', !showMotivations);
+  motivationsWrap.querySelectorAll('label.chip').forEach((label) => {
+    const input = label.querySelector('input');
+    input.required = false; // choix multiple → jamais obligatoire
+    // « Karaté loisir ceinture noire » réservé aux formules incluant le karaté.
+    const hide = !showMotivations || (Boolean(label.dataset.karateOnly) && !isKarate);
+    label.classList.toggle('hidden', hide);
+    if (hide) input.checked = false; // ne pas soumettre une motivation masquée
+  });
 
   // Prix
   const price = computePrice({

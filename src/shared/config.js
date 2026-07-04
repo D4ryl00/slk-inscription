@@ -170,12 +170,19 @@ export const GRADES_SHIDOKAN = [
   '6e Dan',
 ];
 
-/** Motivations proposées (cases à cocher, choix multiple, conditionnel à Karaté). */
+/**
+ * Motivations proposées (cases à cocher, choix multiple).
+ * Affichées pour le Karaté ET pour le Boxing/MMA ; les entrées listées dans
+ * `MOTIVATIONS_KARATE_ONLY` sont réservées aux formules incluant le karaté.
+ */
 export const MOTIVATIONS = [
   'Sport Loisir',
   'Karaté loisir ceinture noire',
   'Compétition',
 ];
+
+/** Motivations réservées aux formules incluant le karaté (masquées pour Boxing/MMA). */
+export const MOTIVATIONS_KARATE_ONLY = ['Karaté loisir ceinture noire'];
 
 /**
  * Colonnes ÉCRITES PAR LE SITE, dans l'ordre, à partir de la colonne A du Sheet.

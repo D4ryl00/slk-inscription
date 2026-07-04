@@ -86,18 +86,20 @@
             </fieldset>
           </div>
 
-          <!-- Champs conditionnels à la section Karaté (remplis dynamiquement) -->
+          <!-- Grade : conditionnel à la section Karaté (rempli dynamiquement) -->
           <div id="karateFields" class="hidden">
             <label>Grade Shidokan
               <select name="gradeShidokan" id="gradeShidokan">
                 <option value="" disabled selected>— Sélectionnez votre grade —</option>
               </select>
             </label>
-            <fieldset id="motivationsField">
-              <legend>Quelles sont vos motivations ? <span class="muted">(plusieurs choix possibles)</span></legend>
-              <div id="motivations" class="chips"></div>
-            </fieldset>
           </div>
+
+          <!-- Motivations : affichées pour Karaté et Boxing/MMA (remplies dynamiquement) -->
+          <fieldset id="motivationsField" class="hidden">
+            <legend>Quelles sont vos motivations ? <span class="muted">(plusieurs choix possibles)</span></legend>
+            <div id="motivations" class="chips"></div>
+          </fieldset>
 
           <label>Membres de votre famille déjà inscrits cette saison (hors cette inscription)
             <input type="number" name="familyAlreadyRegistered" min="0" step="1" value="0" />
