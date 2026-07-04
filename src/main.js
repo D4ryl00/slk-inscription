@@ -80,9 +80,11 @@ function updateRequiredMarks() {
     const isBox = ctrl.type === 'checkbox' || ctrl.type === 'radio';
     // Radios/cases groupés dans un fieldset → astérisque porté par la légende.
     if (isBox && label.closest('fieldset')) return;
-    // Case à cocher (consentements) : libellé après la case → astérisque à la fin.
-    // Champ texte/select : « Libellé * » juste avant le contrôle.
-    addMark(isBox ? label : ctrl, isBox ? 'append' : 'before');
+    // Case à cocher (consentements) : astérisque à la fin du texte (dans .check-text
+    // pour rester sur la même ligne dans le layout flex). Champ texte/select :
+    // « Libellé * » juste avant le contrôle.
+    if (isBox) addMark(label.querySelector('.check-text') || label, 'append');
+    else addMark(ctrl, 'before');
   });
 
   // Groupes radio/case obligatoires → astérisque sur la légende du fieldset.
