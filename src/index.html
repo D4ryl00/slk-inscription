@@ -39,13 +39,13 @@
         <section class="card">
           <h2>2. Coordonnées</h2>
           <div class="grid2">
-            <label class="col2">Adresse — numéro et rue<input name="adresse_numeroRue" required /></label>
-            <label class="col2">Complément d'adresse<input name="adresse_complement" /></label>
-            <label>Ville<input name="adresse_ville" required /></label>
-            <label>Code postal<input name="adresse_codePostal" inputmode="numeric" required /></label>
-            <label>Pays<input name="adresse_pays" value="France" required /></label>
-            <label>Email<input type="email" name="email" required /></label>
-            <label>Numéro de téléphone<input name="telephone" inputmode="tel" required /></label>
+            <label class="col2">Adresse — numéro et rue<input name="adresse_numeroRue" autocomplete="address-line1" required /></label>
+            <label class="col2">Complément d'adresse<input name="adresse_complement" autocomplete="address-line2" /></label>
+            <label>Ville<input name="adresse_ville" autocomplete="address-level2" required /></label>
+            <label>Code postal<input name="adresse_codePostal" inputmode="numeric" autocomplete="postal-code" required /></label>
+            <label>Pays<input name="adresse_pays" value="France" autocomplete="country-name" required /></label>
+            <label>Email<input type="email" name="email" autocomplete="email" required /></label>
+            <label>Numéro de téléphone<input name="telephone" inputmode="tel" autocomplete="tel" required /></label>
           </div>
           <fieldset class="inline">
             <legend>Acceptez-vous de paraître sur les réseaux sociaux (manifestations du club) ?</legend>
