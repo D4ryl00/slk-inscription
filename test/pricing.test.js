@@ -136,8 +136,8 @@ test('buildSheetRow : bon nombre de colonnes et placement des champs clés', () 
   assert.equal(row.length, FORM_COLUMNS.length);
   assert.equal(row[FORM_COLUMNS.indexOf('Email')], 'a@example.com');
   assert.equal(row[FORM_COLUMNS.indexOf('Section')].includes('Karaté'), true);
-  assert.equal(row[FORM_COLUMNS.indexOf('PAIEMENT')].includes('999'), true);
-  assert.equal(row[FORM_COLUMNS.indexOf("PASS'SPORT")].includes('PS-42'), true);
+  assert.equal(row[FORM_COLUMNS.indexOf('Paiement en ligne')].includes('999'), true);
+  assert.equal(row[FORM_COLUMNS.indexOf("Aide Pass'Sport")].includes('PS-42'), true);
   // colonnes « bureau » NON gérées par le code (absentes de FORM_COLUMNS)
   assert.equal(FORM_COLUMNS.includes('CERTIF MÉD'), false);
 });

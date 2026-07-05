@@ -96,5 +96,5 @@ export function buildSheetRow(s, pay) {
   return row;
 }
 
-/** Index (0-based) de la colonne PAIEMENT, pour la déduplication. */
-export const PAIEMENT_COL_INDEX = FORM_COLUMNS.indexOf('PAIEMENT');
+/** Index (0-based) de la colonne « Paiement en ligne », pour la déduplication. */
+export const PAIEMENT_COL_INDEX = FORM_COLUMNS.indexOf('Paiement en ligne');

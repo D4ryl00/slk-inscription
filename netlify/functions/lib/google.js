@@ -2,6 +2,7 @@
 // Le compte de service doit avoir le Sheet partagé en « Éditeur ».
 
 import { google } from 'googleapis';
+import { FORM_COLUMNS } from '../../../src/shared/config.js';
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
 const TAB = process.env.GOOGLE_SHEET_TAB || 'Feuille 1';
@@ -30,14 +31,44 @@ async function getSheets() {
   return _sheets;
 }
 
+let _headersEnsured = false;
+
+/**
+ * Écrit la ligne d'en-têtes (FORM_COLUMNS) en A1 SI le tableau est vide.
+ * Idempotent : ne touche à rien si la 1re ligne contient déjà quelque chose
+ * (en-têtes déjà posés ou données saisies à la main). Le résultat est mémorisé
+ * pour ne pas relire le Sheet à chaque `append` d'un même cold start.
+ */
+export async function ensureHeaders() {
+  if (_headersEnsured) return;
+  const sheets = await getSheets();
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: `${quoteTab(TAB)}!A1:1`,
+  });
+  const firstRow = res.data.values?.[0] || [];
+  const isEmpty = firstRow.every((c) => String(c ?? '').trim() === '');
+  if (isEmpty) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: `${quoteTab(TAB)}!A1`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [FORM_COLUMNS] },
+    });
+  }
+  _headersEnsured = true;
+}
+
 /**
  * Ajoute une ligne sur la PREMIÈRE ligne vide du tableau.
  * `append` détecte la fin des données et insère juste après — les lignes
  * ajoutées à la main par le bureau cohabitent sans être écrasées.
+ * On garantit d'abord la présence des en-têtes (Sheet neuf → 1re ligne posée).
  * @param {(string|number)[]} values dans l'ordre exact des colonnes
  */
 export async function appendRow(values) {
   const sheets = await getSheets();
+  await ensureHeaders();
   await sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID,
     range: `${quoteTab(TAB)}!A1`,

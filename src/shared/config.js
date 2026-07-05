@@ -90,7 +90,7 @@ export const AIDS = {
     label: "Pass'Sport",
     amount: 70,
     requiresCode: true,
-    column: "PASS'SPORT",
+    column: "Aide Pass'Sport",
   },
   peps: {
     // Le PEPS est aussi appelé « Prime Enfant » (c'est une aide, pas un moyen de paiement).
@@ -98,7 +98,7 @@ export const AIDS = {
     label: 'PEPS (Prime Enfant)',
     amount: 30,
     requiresCode: false,
-    column: 'PEPS',
+    column: 'Aide PEPS',
   },
 };
 
@@ -194,41 +194,43 @@ export const MOTIVATIONS_KARATE_ONLY = ['Karaté loisir ceinture noire'];
 /**
  * Colonnes ÉCRITES PAR LE SITE, dans l'ordre, à partir de la colonne A du Sheet.
  * Le webhook fait un `append` de ces colonnes uniquement.
- * ⚠️ NE PAS RÉORDONNER : l'écriture est positionnelle (des en-têtes sont en
- * double, ex. « Numéro de téléphone »), on ne peut donc pas mapper par nom.
- * La 1re ligne du Google Sheet doit reprendre ces en-têtes, dans cet ordre.
+ * ⚠️ NE PAS RÉORDONNER : l'écriture est POSITIONNELLE (par index, pas par nom).
+ * Les libellés sont libres/cosmétiques (lisibilité humaine du Sheet) ; seul
+ * l'ORDRE compte. La 1re ligne du Google Sheet reprend ces en-têtes.
+ * ⚠️ Si vous renommez « Paiement en ligne », mettez à jour `PAIEMENT_COL_INDEX`
+ * dans sheet-row.js (déduplication du webhook).
  */
 export const FORM_COLUMNS = [
-  'Submission Date',
+  'Date de soumission',
   'Nouvel adhérent',
-  'Prénom - Nom - Prénom',
-  'Prénom - Nom - Nom de famille',
+  'Prénom',
+  'Nom',
   'Date de naissance',
   'Lieu de naissance',
-  'Nom des parents (si différent de l\'enfant)',
-  'Adresse - Numéro et rue',
-  'Adresse - Complément d\'adresse',
-  'Adresse - Ville',
-  'Adresse - Code Postal',
-  'Adresse - Pays',
+  'Nom des parents (si différent)',
+  'Adresse',
+  'Complément d\'adresse',
+  'Ville',
+  'Code postal',
+  'Pays',
   'Email',
-  'Numéro de téléphone',
-  'Acceptez vous de paraitre sur les réseaux sociaux (dans le cadre des manifestations du club)',
-  'Prénom - Nom (contact de confiance) - Prénom',
-  'Prénom - Nom (contact de confiance) - Nom de famille',
-  'Numéro de téléphone', // contact de confiance
+  'Téléphone',
+  'Autorisation réseaux sociaux',
+  'Contact de confiance — Prénom',
+  'Contact de confiance — Nom',
+  'Contact de confiance — Téléphone',
   'Section',
-  'Quelles sont vos motivations ?',
+  'Motivations',
   'Grade Shidokan',
-  'Cardio-Budo - Sélectionnez votre ou vos jours',
+  'Cardio-Budo — Jours',
   'Mode de règlement',
   'Total cotisation',
-  'PAIEMENT',
+  'Paiement en ligne',
   'Règlements hors ligne',
-  'PEPS',
-  "PASS'SPORT",
+  'Aide PEPS',
+  'Aide Pass\'Sport',
   'Règlement intérieur',
-  'RGPD consent',
+  'Consentement RGPD',
 ];
 
 /** Jours proposés pour le Cardio Budo (À CONFIRMER avec le planning du club). */
