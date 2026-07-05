@@ -6,10 +6,11 @@
 /**
  * Disciplines proposées par le club.
  * `contact: true` déclenche l'exigence médicale renforcée (fond d'œil + ECG)
- * pour les MAJEURS — cf. note FFKarate (full-contact / Shido-Boxing / Shido-Mix-Martial).
+ * pour les MAJEURS qui combattent au KO — cf. note FFKarate. Le karaté Shidokan
+ * est un karaté full-contact (KO), au même titre que le Shido-Boxing / Shido-Mix-Martial.
  */
 export const DISCIPLINES = {
-  karate: { label: 'Karaté Shidokan', contact: false },
+  karate: { label: 'Karaté Shidokan', contact: true },
   mma: { label: 'Shido-Mix-Martial', contact: true },
   boxing: { label: 'Shido-Boxing', contact: true },
   // À CONFIRMER : le Cardio Budo (fitness) implique-t-il fond d'œil + ECG ?
