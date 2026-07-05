@@ -82,10 +82,8 @@ export function buildSheetRow(s, pay) {
     totalCell,                                             // Total cotisation
     paiementCell,                                          // PAIEMENT (payé en ligne)
     horsLigneCell,                                         // Règlements hors ligne
-    aidCell('peps'),                                       // PEPS
-    aidCell('passsport'),                                  // PASS'SPORT
-    s.reglementInterieur ? 'Accepté' : '',                 // Règlement intérieur
-    s.rgpdConsent ? `Accepté le ${new Date().toISOString().slice(0, 10)}` : '', // RGPD consent
+    aidCell('peps'),                                       // Aide PEPS
+    aidCell('passsport'),                                  // Aide Pass'Sport
   ];
 
   if (row.length !== FORM_COLUMNS.length) {

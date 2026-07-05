@@ -230,8 +230,6 @@ export const FORM_COLUMNS = [
   'Règlements hors ligne',
   'Aide PEPS',
   'Aide Pass\'Sport',
-  'Règlement intérieur',
-  'Consentement RGPD',
 ];
 
 /** Jours proposés pour le Cardio Budo (À CONFIRMER avec le planning du club). */
