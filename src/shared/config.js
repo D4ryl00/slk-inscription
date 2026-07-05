@@ -39,6 +39,13 @@ export const OFFERS = [
     priceAnnual: 330,
   },
   {
+    id: 'mix-boxing-enfant',
+    label: 'Shido-Mix-Martial + Shido-Boxing — Enfant / Ado',
+    category: 'enfant',
+    disciplines: ['mma', 'boxing'],
+    priceAnnual: 265,
+  },
+  {
     id: 'mix-boxing-adulte',
     label: 'Shido-Mix-Martial + Shido-Boxing — Adulte',
     category: 'adulte',
