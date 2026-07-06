@@ -59,6 +59,7 @@ export const OFFERS = [
     category: 'na',
     disciplines: ['cardio'],
     priceAnnual: 180,
+    sessions: 1,
   },
   {
     id: 'cardio-2',
@@ -66,6 +67,7 @@ export const OFFERS = [
     category: 'na',
     disciplines: ['cardio'],
     priceAnnual: 265,
+    sessions: 2,
   },
   {
     id: 'cardio-3',
@@ -73,6 +75,7 @@ export const OFFERS = [
     category: 'na',
     disciplines: ['cardio'],
     priceAnnual: 320,
+    sessions: 3,
   },
 ];
 

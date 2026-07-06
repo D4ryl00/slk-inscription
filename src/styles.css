@@ -63,6 +63,7 @@ fieldset.inline input { width: auto; margin: 0; }
 .chip { display: inline-flex; align-items: center; gap: 6px; margin: 0; color: var(--ink);
   border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; }
 .chip input { width: auto; margin: 0; }
+.chip:has(input:disabled) { opacity: 0.5; }
 
 .check { display: flex; align-items: flex-start; gap: 8px; color: var(--ink); margin-bottom: 10px; }
 .check input { width: auto; margin: 3px 0 0; }

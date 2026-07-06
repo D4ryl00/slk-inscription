@@ -192,8 +192,34 @@ function refresh() {
     offer && (offer.disciplines.includes('boxing') || offer.disciplines.includes('mma')),
   );
 
-  // Cardio days only for cardio offers
-  cardioWrap.classList.toggle('hidden', !isCardio);
+  // Cardio-Budo days: the offer dictates how many sessions.
+  //  • 1 or 2 sessions → show the picker and force exactly that many days.
+  //  • 3 sessions      → they attend every day, so hide the picker and select all.
+  //  • not cardio      → hide and clear.
+  const cardioSessions = isCardio ? offer.sessions || 0 : 0;
+  const dayBoxes = [...cardioDays.querySelectorAll('input[name="cardioJours"]')];
+  if (!isCardio) {
+    cardioWrap.classList.add('hidden');
+    dayBoxes.forEach((b) => { b.checked = false; b.disabled = false; });
+  } else if (cardioSessions >= 3) {
+    cardioWrap.classList.add('hidden');
+    dayBoxes.forEach((b) => { b.checked = true; b.disabled = false; });
+  } else {
+    cardioWrap.classList.remove('hidden');
+    // Trim extra days if the offer now allows fewer, then cap the selection.
+    let checked = dayBoxes.filter((b) => b.checked);
+    while (checked.length > cardioSessions) {
+      checked.pop().checked = false;
+      checked = dayBoxes.filter((b) => b.checked);
+    }
+    const atCap = checked.length >= cardioSessions;
+    dayBoxes.forEach((b) => { b.disabled = !b.checked && atCap; });
+    const legend = cardioWrap.querySelector('legend');
+    if (legend) {
+      legend.textContent = `Cardio-Budo — sélectionnez ${cardioSessions} jour${cardioSessions > 1 ? 's' : ''}`;
+    }
+  }
+
   // Grade only for Karate offers
   karateFields.classList.toggle('hidden', !isKarate);
   setRequired(karateFields, isKarate);
@@ -308,11 +334,15 @@ form.addEventListener('submit', async (e) => {
 
   const s = readForm();
 
-  // "At least one day" validation for Cardio-Budo (not doable in native HTML)
+  // Cardio-Budo day count must match the offer (not doable in native HTML).
+  // 3-session offers select every day automatically, so they need no check.
   const offer = getOffer(s.offerId);
-  if (offer && offer.disciplines.includes('cardio') && s.cardioJours.length === 0) {
-    errorEl.textContent = 'Sélectionnez au moins un jour pour le Cardio-Budo.';
-    return;
+  if (offer && offer.disciplines.includes('cardio') && offer.sessions < 3) {
+    const need = offer.sessions;
+    if (s.cardioJours.length !== need) {
+      errorEl.textContent = `Sélectionnez exactement ${need} jour${need > 1 ? 's' : ''} pour le Cardio-Budo.`;
+      return;
+    }
   }
 
   const btn = $('#submitBtn');
