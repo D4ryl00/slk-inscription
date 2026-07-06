@@ -8,8 +8,8 @@
 import { getStore } from '@netlify/blobs';
 import { extractPaymentReference, getCheckoutIntent, isCheckoutPaid } from './lib/helloasso.js';
 import { extractMemberId, verifyHelloAssoSignature } from './lib/webhook-utils.js';
-import { appendRow, columnContains } from './lib/google.js';
-import { PAIEMENT_COL_INDEX, buildSheetRow } from '../../src/shared/sheet-row.js';
+import { appendRow, getColumnValues } from './lib/google.js';
+import { PAIEMENT_COL_INDEX, buildSheetRow, paymentCellMatches } from '../../src/shared/sheet-row.js';
 
 export default async (req) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
@@ -67,7 +67,8 @@ export default async (req) => {
 
   // --- Deduplication (replayed webhook) ---------------------------------------
   try {
-    if (await columnContains(PAIEMENT_COL_INDEX, paymentId)) {
+    const cells = await getColumnValues(PAIEMENT_COL_INDEX);
+    if (cells.some((c) => paymentCellMatches(c, paymentId))) {
       await store.delete(memberId);
       return ack('already recorded');
     }

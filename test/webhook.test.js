@@ -12,6 +12,7 @@ import {
   isCheckoutPaid,
 } from '../netlify/functions/lib/helloasso.js';
 import { extractMemberId, verifyHelloAssoSignature } from '../netlify/functions/lib/webhook-utils.js';
+import { paymentCellMatches } from '../src/shared/sheet-row.js';
 
 // --- extractMemberId: notification format -------------------------------------
 
@@ -82,6 +83,33 @@ test('extractPaymentReference: falls back to the first payment, otherwise null',
   assert.equal(extractPaymentReference({ order: {} }), null);
   assert.equal(extractPaymentReference({}), null);
   assert.equal(extractPaymentReference(null), null);
+});
+
+// --- paymentCellMatches: deduplication against the Sheet ------------------------
+
+const PAID_CELL = 'En ligne 330,00 € (CB 1x) — paiement 1234';
+
+test('paymentCellMatches: exact payment id in the cell → true', () => {
+  assert.equal(paymentCellMatches(PAID_CELL, '1234'), true);
+});
+
+test('paymentCellMatches: prefix/suffix/substring of another id → false', () => {
+  assert.equal(paymentCellMatches(PAID_CELL, '123'), false);
+  assert.equal(paymentCellMatches(PAID_CELL, '234'), false);
+  assert.equal(paymentCellMatches(PAID_CELL, '12345'), false);
+});
+
+test('paymentCellMatches: id must follow the word "paiement" (not an amount)', () => {
+  assert.equal(paymentCellMatches('En ligne 1 234,00 € (CB 3x) — paiement 9', '1'), false);
+  assert.equal(paymentCellMatches('En ligne 1 234,00 € (CB 3x) — paiement 9', '9'), true);
+});
+
+test('paymentCellMatches: cell without payment, empty cell or empty id → false', () => {
+  assert.equal(paymentCellMatches('Aucun paiement en ligne', '1234'), false);
+  assert.equal(paymentCellMatches('', '1234'), false);
+  assert.equal(paymentCellMatches(undefined, '1234'), false);
+  assert.equal(paymentCellMatches(PAID_CELL, ''), false);
+  assert.equal(paymentCellMatches(PAID_CELL, null), false);
 });
 
 // --- verifyHelloAssoSignature: authenticity (HMAC-SHA256 hex) ------------------

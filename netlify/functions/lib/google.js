@@ -92,13 +92,6 @@ export async function getColumnValues(colIndex) {
   return (res.data.values || []).map((r) => r[0] ?? '');
 }
 
-/** True if `token` already appears in the column (payment already recorded). */
-export async function columnContains(colIndex, token) {
-  if (!token) return false;
-  const values = await getColumnValues(colIndex);
-  return values.some((v) => String(v).includes(token));
-}
-
 function columnLetter(index) {
   let n = index + 1;
   let s = '';

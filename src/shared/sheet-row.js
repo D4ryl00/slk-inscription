@@ -111,3 +111,20 @@ export function buildSheetRow(s, pay) {
 
 /** Index (0-based) of the "Paiement en ligne" column, for deduplication. */
 export const PAIEMENT_COL_INDEX = FORM_COLUMNS.indexOf('Paiement en ligne');
+
+/**
+ * True if a "Paiement en ligne" cell records EXACTLY this payment reference.
+ * The cell ends with `— paiement <id>` (cf. paiementCell above): we require the
+ * word `paiement` immediately followed by the full id. A substring test would
+ * false-positive on a prefix (id "123" vs cell "… paiement 1234") and make the
+ * webhook drop a paid member as "already recorded".
+ * @param {unknown} cell value read from the Sheet
+ * @param {string} paymentId reference to look for
+ * @returns {boolean}
+ */
+export function paymentCellMatches(cell, paymentId) {
+  if (!paymentId) return false;
+  const id = String(paymentId);
+  const words = String(cell ?? '').split(/\s+/);
+  return words.some((w, i) => w === 'paiement' && words[i + 1] === id);
+}
