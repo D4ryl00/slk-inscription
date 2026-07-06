@@ -1,5 +1,5 @@
-// Logique du formulaire : remplissage dynamique, prix en direct, checklist de
-// pièces conditionnelle, envoi vers /api/create-checkout puis redirection.
+// Form logic: dynamic filling, live price, conditional documents checklist,
+// submit to /api/create-checkout then redirect.
 
 import {
   AIDS,
@@ -17,7 +17,7 @@ import { isMinorFromBirthdate, requiredDocuments } from './shared/docs.js';
 const $ = (sel) => document.querySelector(sel);
 const form = $('#form');
 
-// --- Remplir la liste des formules ------------------------------------------
+// --- Fill the offers list ---------------------------------------------------
 const offerSelect = $('#offerId');
 for (const o of OFFERS) {
   const opt = document.createElement('option');
@@ -26,7 +26,7 @@ for (const o of OFFERS) {
   offerSelect.appendChild(opt);
 }
 
-// --- Jours Cardio-Budo -------------------------------------------------------
+// --- Cardio-Budo days --------------------------------------------------------
 const cardioWrap = $('#cardioDaysWrap');
 const cardioDays = $('#cardioDays');
 for (const day of CARDIO_DAYS) {
@@ -37,7 +37,7 @@ for (const day of CARDIO_DAYS) {
   cardioDays.appendChild(label);
 }
 
-// --- Champs conditionnels à Karaté : grade + motivations --------------------
+// --- Karate-conditional fields: grade + motivations -------------------------
 const karateFields = $('#karateFields');
 const gradeSelect = $('#gradeShidokan');
 for (const g of GRADES_SHIDOKAN) {
@@ -62,9 +62,9 @@ function setRequired(container, required) {
   });
 }
 
-// --- Astérisque rouge sur les champs obligatoires ---------------------------
-// Recalculé à chaque refresh() car certains champs deviennent obligatoires
-// dynamiquement (grade/motivations pour le Karaté, code d'aide pour Pass'Sport).
+// --- Red asterisk on required fields ----------------------------------------
+// Recomputed on every refresh() because some fields become required dynamically
+// (grade/motivations for Karate, aid code for Pass'Sport).
 function addMark(anchor, mode) {
   const span = document.createElement('span');
   span.className = 'req';
@@ -81,16 +81,16 @@ function updateRequiredMarks() {
     const ctrl = label.querySelector(':scope > input, :scope > select, :scope > textarea');
     if (!ctrl || !ctrl.required) return;
     const isBox = ctrl.type === 'checkbox' || ctrl.type === 'radio';
-    // Radios/cases groupés dans un fieldset → astérisque porté par la légende.
+    // Radios/checkboxes grouped in a fieldset → asterisk carried by the legend.
     if (isBox && label.closest('fieldset')) return;
-    // Case à cocher (consentements) : astérisque à la fin du texte (dans .check-text
-    // pour rester sur la même ligne dans le layout flex). Champ texte/select :
-    // « Libellé * » juste avant le contrôle.
+    // Checkbox (consents): asterisk at the end of the text (inside .check-text to
+    // stay on the same line in the flex layout). Text/select field:
+    // "Label *" right before the control.
     if (isBox) addMark(label.querySelector('.check-text') || label, 'append');
     else addMark(ctrl, 'before');
   });
 
-  // Groupes radio/case obligatoires → astérisque sur la légende du fieldset.
+  // Required radio/checkbox groups → asterisk on the fieldset legend.
   form.querySelectorAll('fieldset').forEach((fs) => {
     const legend = fs.querySelector('legend');
     const grouped = fs.querySelector('input[type="radio"]:required, input[type="checkbox"]:required');
@@ -98,7 +98,7 @@ function updateRequiredMarks() {
   });
 }
 
-// --- Moyens de règlement hors ligne (montants saisis) -----------------------
+// --- Offline payment methods (entered amounts) ------------------------------
 const offlineMethodsWrap = $('#offlineMethods');
 for (const [key, m] of Object.entries(PAYMENT_METHODS)) {
   const label = document.createElement('label');
@@ -117,19 +117,19 @@ function readOfflinePayments(fd) {
   return list;
 }
 
-// --- Aide : afficher le champ code si une aide est choisie -------------------
+// --- Aid: show the code field if an aid is chosen ---------------------------
 const aidType = $('#aidType');
 const aidCodeWrap = $('#aidCodeWrap');
 aidType.addEventListener('change', () => {
-  // Le code n'est demandé que pour les aides qui l'exigent (Pass'Sport).
-  // Pour le PEPS, pas de code en ligne : le formulaire est rapporté au bureau.
+  // The code is only asked for aids that require it (Pass'Sport).
+  // For PEPS, no online code: the form is brought to the office.
   const needsCode = Boolean(AIDS[aidType.value]?.requiresCode);
   aidCodeWrap.classList.toggle('hidden', !needsCode);
   $('#aidCode').required = needsCode;
   refresh();
 });
 
-// --- Récupère l'état courant du formulaire ----------------------------------
+// --- Read the current form state --------------------------------------------
 function readForm() {
   const fd = new FormData(form);
   return {
@@ -168,7 +168,7 @@ function readForm() {
   };
 }
 
-// --- Mise à jour dynamique (prix + pièces + jours cardio) --------------------
+// --- Dynamic update (price + documents + cardio days) -----------------------
 function refresh() {
   const s = readForm();
   const offer = getOffer(s.offerId);
@@ -178,25 +178,25 @@ function refresh() {
     offer && (offer.disciplines.includes('boxing') || offer.disciplines.includes('mma')),
   );
 
-  // Jours Cardio uniquement pour les formules cardio
+  // Cardio days only for cardio offers
   cardioWrap.classList.toggle('hidden', !isCardio);
-  // Grade uniquement pour les formules Karaté
+  // Grade only for Karate offers
   karateFields.classList.toggle('hidden', !isKarate);
   setRequired(karateFields, isKarate);
 
-  // Motivations : affichées pour Karaté ET Boxing/MMA (pas pour le Cardio).
+  // Motivations: shown for Karate AND Boxing/MMA (not for Cardio).
   const showMotivations = isKarate || isStriking;
   motivationsField.classList.toggle('hidden', !showMotivations);
   motivationsWrap.querySelectorAll('label.chip').forEach((label) => {
     const input = label.querySelector('input');
-    input.required = false; // choix multiple → jamais obligatoire
-    // « Karaté loisir ceinture noire » réservé aux formules incluant le karaté.
+    input.required = false; // multiple choice → never required
+    // "Karaté loisir ceinture noire" reserved for offers including karate.
     const hide = !showMotivations || (Boolean(label.dataset.karateOnly) && !isKarate);
     label.classList.toggle('hidden', hide);
-    if (hide) input.checked = false; // ne pas soumettre une motivation masquée
+    if (hide) input.checked = false; // do not submit a hidden motivation
   });
 
-  // Prix
+  // Price
   const price = computePrice({
     offerId: s.offerId,
     paymentPlan: s.paymentPlan,
@@ -213,7 +213,7 @@ function refresh() {
     totalEl.textContent = '—';
     cbEl.textContent = '—';
     detail.textContent = offer ? price.error : 'Sélectionnez une formule.';
-    submitBtn.disabled = Boolean(offer); // bloque si offre choisie mais prix invalide
+    submitBtn.disabled = Boolean(offer); // block if an offer is chosen but the price is invalid
   } else {
     submitBtn.disabled = false;
     totalEl.textContent = formatEuros(price.totalCents);
@@ -234,7 +234,7 @@ function refresh() {
         : 'Valider mon inscription (règlement au bureau)';
   }
 
-  // Pièces à rapporter
+  // Documents to bring
   const list = $('#docsList');
   list.innerHTML = '';
   const minor = isMinorFromBirthdate(s.dateNaissance);
@@ -260,7 +260,7 @@ form.addEventListener('input', refresh);
 form.addEventListener('change', refresh);
 refresh();
 
-// --- Envoi -------------------------------------------------------------------
+// --- Submit ------------------------------------------------------------------
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const errorEl = $('#formError');
@@ -270,7 +270,7 @@ form.addEventListener('submit', async (e) => {
 
   const s = readForm();
 
-  // Validation « au moins un jour » pour le Cardio-Budo (non gérable en HTML natif)
+  // "At least one day" validation for Cardio-Budo (not doable in native HTML)
   const offer = getOffer(s.offerId);
   if (offer && offer.disciplines.includes('cardio') && s.cardioJours.length === 0) {
     errorEl.textContent = 'Sélectionnez au moins un jour pour le Cardio-Budo.';
@@ -294,6 +294,6 @@ form.addEventListener('submit', async (e) => {
   } catch (err) {
     errorEl.textContent = err.message;
     btn.disabled = false;
-    refresh(); // restaure le libellé du bouton
+    refresh(); // restore the button label
   }
 });

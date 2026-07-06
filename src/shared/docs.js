@@ -1,17 +1,17 @@
-// Règles « pièces à rapporter au bureau », affichées par le formulaire selon la
-// catégorie (mineur / majeur) et la discipline. Aucun fichier n'est uploadé :
-// on informe seulement, et le bureau valide physiquement.
+// "Documents to bring to the office" rules, shown by the form depending on the
+// category (minor / adult) and the discipline. No file is uploaded: we only
+// inform, and the office validates physically.
 //
-// On LIE les PDF officiels FFKarate plutôt que de figer les règles médicales
-// (elles évoluent d'une saison à l'autre).
+// We LINK the official FFKarate PDFs rather than hardcoding the medical rules
+// (they change from one season to the next).
 
 import { getOffer, offerIsContact } from './config.js';
 
 export const DOC_LINKS = {
-  // Annexe 1 : questionnaire de santé à remplir par le parent AVEC l'enfant.
+  // Annex 1: health questionnaire to be filled in by the parent WITH the child.
   questionnaireMineur:
     'https://www.ffkarate.fr/wp-content/uploads/2024/08/Annexe-N%C2%B01-QUESTIONNAIRE-A-DESTINATION-DES-LICENCIES-MINEURS_vf_2.pdf',
-  // Annexe 2 : attestation sur l'honneur, si TOUTES les réponses sont négatives.
+  // Annex 2: sworn statement, if ALL answers are negative.
   attestationMineur:
     'https://www.ffkarate.fr/wp-content/uploads/2024/08/ATTESTATION-SUR-LHONNEUR-SPORTIF-MINEUR_ANNEXE2_2023_2024_M_2.pdf',
   noteCertificatMedical:
@@ -22,9 +22,9 @@ export const DOC_LINKS = {
 
 /**
  * @param {object} params
- * @param {boolean} params.isMinor  adhérent mineur au moment de l'inscription
- * @param {string}  params.offerId  offre choisie (pour savoir si discipline de contact)
- * @param {{type?: string}} [params.aid] aide sélectionnée
+ * @param {boolean} params.isMinor  member is a minor at registration time
+ * @param {string}  params.offerId  chosen offer (to know if it's a contact discipline)
+ * @param {{type?: string}} [params.aid] selected aid
  * @returns {{id:string, label:string, help?:string, link?:string, linkLabel?:string}[]}
  */
 export function requiredDocuments({ isMinor, offerId, aid } = {}) {
@@ -35,8 +35,8 @@ export function requiredDocuments({ isMinor, offerId, aid } = {}) {
   const hasStriking = disciplines.includes('boxing') || disciplines.includes('mma');
   const docs = [];
 
-  // Photo d'identité : obligatoire pour le karaté ; pour le Shido-Boxing et le
-  // Shido-Mix-Martial, uniquement pour les compétiteurs.
+  // ID photo: mandatory for karate; for Shido-Boxing and Shido-Mix-Martial,
+  // only for competitors.
   if (hasKarate || hasStriking) {
     docs.push({
       id: 'photo-identite',
@@ -78,8 +78,8 @@ export function requiredDocuments({ isMinor, offerId, aid } = {}) {
       linkLabel: 'Note FFKarate 2025-2026',
     });
   } else if (hasKarate || hasStriking) {
-    // Majeurs : le certificat médical n'est obligatoire QUE pour les compétiteurs
-    // (en loisir, aucun certificat n'est requis).
+    // Adults: the medical certificate is mandatory ONLY for competitors
+    // (for leisure, no certificate is required).
     docs.push({
       id: 'certificat-medical',
       label: 'Compétiteurs : certificat médical de non contre-indication',
@@ -129,8 +129,8 @@ export function requiredDocuments({ isMinor, offerId, aid } = {}) {
 }
 
 /**
- * Détermine si l'adhérent est mineur à partir d'une date de naissance (AAAA-MM-JJ).
- * `refDate` = date de référence (par défaut aujourd'hui).
+ * Determines whether the member is a minor from a date of birth (YYYY-MM-DD).
+ * `refDate` = reference date (defaults to today).
  */
 export function isMinorFromBirthdate(birthdate, refDate = new Date()) {
   if (!birthdate) return null;

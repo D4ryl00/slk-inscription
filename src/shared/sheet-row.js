@@ -1,6 +1,6 @@
-// Construit la ligne du Google Sheet dans l'ORDRE EXACT de FORM_COLUMNS.
-// Le site n'écrit QUE les colonnes issues du formulaire (bloc contigu dès la
-// colonne A). Écriture positionnelle (des en-têtes sont en double) → tableau.
+// Builds the Google Sheet row in the EXACT ORDER of FORM_COLUMNS.
+// The site writes ONLY the columns coming from the form (contiguous block from
+// column A). Positional write (some headers are duplicated) → array.
 
 import { AIDS, FORM_COLUMNS, getOffer } from './config.js';
 import { formatEuros } from './pricing.js';
@@ -8,11 +8,11 @@ import { formatEuros } from './pricing.js';
 const oui = (b) => (b ? 'Oui' : 'Non');
 
 /**
- * @param {object} s submission envoyée par le front
- * @param {object} pay récapitulatif de paiement :
+ * @param {object} s submission sent by the front
+ * @param {object} pay payment summary:
  *   { date, netTotalCents, onlineAmountCents, onlinePaymentId, onlinePlanLabel,
  *     offlinePayments:[{label,amountCents}], offlineTotalCents, familyDiscountCents }
- * @returns {(string|number)[]} exactement FORM_COLUMNS.length valeurs
+ * @returns {(string|number)[]} exactly FORM_COLUMNS.length values
  */
 export function buildSheetRow(s, pay) {
   const offer = getOffer(s.offerId);
@@ -23,25 +23,25 @@ export function buildSheetRow(s, pay) {
   const p = pay || {};
   const offline = p.offlinePayments || [];
 
-  // Résumé des moyens de règlement choisis.
+  // Summary of the chosen payment methods.
   const methods = [];
   if (p.onlineAmountCents > 0) methods.push('CB (HelloAsso)');
   for (const o of offline) methods.push(o.label);
   const modeReglement = methods.length ? methods.join(' + ') : 'Aucun (cotisation nulle)';
 
-  // Total cotisation (avec mention de la remise famille si elle s'applique).
+  // Total fee (mentioning the family discount if it applies).
   const totalCell =
     formatEuros(p.netTotalCents || 0) +
     (p.familyDiscountCents ? ` (remise famille −${formatEuros(p.familyDiscountCents)} incluse)` : '');
 
-  // Montant réellement payé en ligne.
+  // Amount actually paid online.
   const paiementCell =
     p.onlineAmountCents > 0
       ? `En ligne ${formatEuros(p.onlineAmountCents)} (${p.onlinePlanLabel || 'CB'})` +
         (p.onlinePaymentId ? ` — paiement ${p.onlinePaymentId}` : '')
       : 'Aucun paiement en ligne';
 
-  // Détail des règlements hors ligne (à encaisser au bureau).
+  // Breakdown of offline payments (to be collected at the office).
   const horsLigneCell = offline.length
     ? offline.map((o) => `${o.label} : ${formatEuros(o.amountCents)}`).join(' ; ') +
       ' — à encaisser au bureau'
@@ -54,45 +54,45 @@ export function buildSheetRow(s, pay) {
     return `Déduit ${a ? a.amount + ' €' : ''}${codePart} — À VÉRIFIER`;
   };
 
-  // Ordre = FORM_COLUMNS.
+  // Order = FORM_COLUMNS.
   const row = [
-    p.date || new Date().toISOString(),                    // Submission Date
-    s.nouvelAdherent || '',                                // Nouvel adhérent
-    s.prenom || '',                                        // Prénom
-    s.nom || '',                                           // Nom de famille
-    s.dateNaissance || '',                                 // Date de naissance
-    s.lieuNaissance || '',                                 // Lieu de naissance
-    s.nomParents || '',                                    // Nom des parents
-    addr.numeroRue || '',                                  // Adresse - Numéro et rue
-    addr.complement || '',                                 // Adresse - Complément
-    addr.ville || '',                                      // Adresse - Ville
-    addr.codePostal || '',                                 // Adresse - Code Postal
-    addr.pays || '',                                       // Adresse - Pays
+    p.date || new Date().toISOString(),                    // Submission date
+    s.nouvelAdherent || '',                                // New member
+    s.prenom || '',                                        // First name
+    s.nom || '',                                           // Last name
+    s.dateNaissance || '',                                 // Date of birth
+    s.lieuNaissance || '',                                 // Place of birth
+    s.nomParents || '',                                    // Parents' name
+    addr.numeroRue || '',                                  // Address - Number and street
+    addr.complement || '',                                 // Address - Complement
+    addr.ville || '',                                      // Address - City
+    addr.codePostal || '',                                 // Address - Postal code
+    addr.pays || '',                                       // Address - Country
     s.email || '',                                         // Email
-    s.telephone || '',                                     // Numéro de téléphone
-    oui(s.reseauxSociaux === 'Oui' || s.reseauxSociaux === true), // Réseaux sociaux
-    cc.prenom || '',                                       // Contact confiance - Prénom
-    cc.nom || '',                                          // Contact confiance - Nom
-    cc.telephone || '',                                    // Contact confiance - Téléphone
+    s.telephone || '',                                     // Phone number
+    oui(s.reseauxSociaux === 'Oui' || s.reseauxSociaux === true), // Social media
+    cc.prenom || '',                                       // Trusted contact - First name
+    cc.nom || '',                                          // Trusted contact - Last name
+    cc.telephone || '',                                    // Trusted contact - Phone
     sectionLabel,                                          // Section
     Array.isArray(s.motivations) ? s.motivations.join(', ') : (s.motivations || ''), // Motivations
-    s.gradeShidokan || '',                                 // Grade Shidokan
-    Array.isArray(s.cardioJours) ? s.cardioJours.join(', ') : (s.cardioJours || ''), // Cardio jours
-    modeReglement,                                         // Mode de règlement
-    totalCell,                                             // Total cotisation
-    paiementCell,                                          // PAIEMENT (payé en ligne)
-    horsLigneCell,                                         // Règlements hors ligne
-    aidCell('peps'),                                       // Aide PEPS
-    aidCell('passsport'),                                  // Aide Pass'Sport
+    s.gradeShidokan || '',                                 // Shidokan grade
+    Array.isArray(s.cardioJours) ? s.cardioJours.join(', ') : (s.cardioJours || ''), // Cardio days
+    modeReglement,                                         // Payment method
+    totalCell,                                             // Total fee
+    paiementCell,                                          // PAYMENT (paid online)
+    horsLigneCell,                                         // Offline payments
+    aidCell('peps'),                                       // PEPS aid
+    aidCell('passsport'),                                  // Pass'Sport aid
   ];
 
   if (row.length !== FORM_COLUMNS.length) {
     throw new Error(
-      `buildSheetRow: ${row.length} valeurs pour ${FORM_COLUMNS.length} colonnes.`,
+      `buildSheetRow: ${row.length} values for ${FORM_COLUMNS.length} columns.`,
     );
   }
   return row;
 }
 
-/** Index (0-based) de la colonne « Paiement en ligne », pour la déduplication. */
+/** Index (0-based) of the "Paiement en ligne" column, for deduplication. */
 export const PAIEMENT_COL_INDEX = FORM_COLUMNS.indexOf('Paiement en ligne');

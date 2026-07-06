@@ -16,7 +16,7 @@
       </header>
 
       <form id="form" novalidate>
-        <!-- ── Adhérent ─────────────────────────────────────────────── -->
+        <!-- ── Member ──────────────────────────────────────────────── -->
         <section class="card">
           <h2>1. L'adhérent</h2>
           <fieldset class="inline">
@@ -35,7 +35,7 @@
           </label>
         </section>
 
-        <!-- ── Coordonnées ──────────────────────────────────────────── -->
+        <!-- ── Contact details ─────────────────────────────────────── -->
         <section class="card">
           <h2>2. Coordonnées</h2>
           <div class="grid2">
@@ -60,7 +60,7 @@
           </div>
         </section>
 
-        <!-- ── Planning des cours ───────────────────────────────────── -->
+        <!-- ── Class schedule ──────────────────────────────────────── -->
         <section class="card" id="planningCard">
           <h2>Planning des cours</h2>
           <a href="/planning-slk.png" target="_blank" rel="noopener">
@@ -70,7 +70,7 @@
           <p class="hint">Cliquez sur le planning pour l'agrandir.</p>
         </section>
 
-        <!-- ── Adhésion ─────────────────────────────────────────────── -->
+        <!-- ── Membership ──────────────────────────────────────────── -->
         <section class="card">
           <h2>3. Choix de l'adhésion</h2>
           <label>Formule
@@ -86,7 +86,7 @@
             </fieldset>
           </div>
 
-          <!-- Grade : conditionnel à la section Karaté (rempli dynamiquement) -->
+          <!-- Grade: conditional on the Karate section (filled dynamically) -->
           <div id="karateFields" class="hidden">
             <label>Grade Shidokan
               <select name="gradeShidokan" id="gradeShidokan">
@@ -95,7 +95,7 @@
             </label>
           </div>
 
-          <!-- Motivations : affichées pour Karaté et Boxing/MMA (remplies dynamiquement) -->
+          <!-- Motivations: shown for Karate and Boxing/MMA (filled dynamically) -->
           <fieldset id="motivationsField" class="hidden">
             <legend>Quelles sont vos motivations ? <span class="muted">(plusieurs choix possibles)</span></legend>
             <div id="motivations" class="chips"></div>
@@ -136,14 +136,14 @@
           </fieldset>
         </section>
 
-        <!-- ── Pièces à rapporter ───────────────────────────────────── -->
+        <!-- ── Documents to bring ──────────────────────────────────── -->
         <section class="card" id="docsCard">
           <h2>4. Pièces à rapporter au bureau</h2>
           <p class="hint">Aucun document n'est à envoyer en ligne. Apportez-les au bureau du club.</p>
           <ul id="docsList" class="docs"></ul>
         </section>
 
-        <!-- ── Récapitulatif & consentements ────────────────────────── -->
+        <!-- ── Summary & consents ──────────────────────────────────── -->
         <section class="card">
           <h2>5. Récapitulatif</h2>
           <div id="priceBox" class="price">

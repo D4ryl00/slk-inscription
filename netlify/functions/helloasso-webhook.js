@@ -1,9 +1,9 @@
-// POST /api/helloasso-webhook  (URL à déclarer dans l'admin HelloAsso)
-// Reçoit la notification de paiement, la VÉRIFIE via l'API (le corps est
-// falsifiable), puis écrit l'adhérent dans le Google Sheet et purge le blob.
+// POST /api/helloasso-webhook  (URL to declare in the HelloAsso admin)
+// Receives the payment notification, VERIFIES it through the API (the body can
+// be forged), then writes the member into the Google Sheet and purges the blob.
 //
-// On répond toujours 200 (sauf corps illisible) pour ne pas déclencher de
-// tempête de retries ; l'écriture ne se fait que si le paiement est confirmé.
+// We always respond 200 (except on an unreadable body) to avoid triggering a
+// storm of retries; the write only happens once the payment is confirmed.
 
 import { getStore } from '@netlify/blobs';
 import { extractPaymentReference, getCheckoutIntent, isCheckoutPaid } from './lib/helloasso.js';
@@ -12,23 +12,23 @@ import { appendRow, columnContains } from './lib/google.js';
 import { PAIEMENT_COL_INDEX, buildSheetRow } from '../../src/shared/sheet-row.js';
 
 export default async (req) => {
-  if (req.method !== 'POST') return new Response('Méthode non autorisée', { status: 405 });
+  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
-  // Lire le corps BRUT (nécessaire pour vérifier la signature HMAC).
+  // Read the RAW body (required to verify the HMAC signature).
   let raw;
   try {
     raw = await req.text();
   } catch {
-    return new Response('Corps invalide', { status: 400 });
+    return new Response('Invalid body', { status: 400 });
   }
 
-  // Vérification de signature — uniquement si une clé est configurée (partenaire).
+  // Signature check — only if a key is configured (partner feature).
   const sigKey = process.env.HELLOASSO_WEBHOOK_SIGNATURE_KEY;
   if (sigKey) {
     const sig = req.headers.get('x-ha-signature');
     if (!verifyHelloAssoSignature(raw, sig, sigKey)) {
-      console.warn('webhook: signature invalide/absente → rejet');
-      return new Response('Signature invalide', { status: 401 });
+      console.warn('webhook: invalid/missing signature → rejected');
+      return new Response('Invalid signature', { status: 401 });
     }
   }
 
@@ -36,45 +36,45 @@ export default async (req) => {
   try {
     payload = JSON.parse(raw);
   } catch {
-    return new Response('JSON invalide', { status: 400 });
+    return new Response('Invalid JSON', { status: 400 });
   }
 
   const memberId = extractMemberId(payload);
-  if (!memberId) return ack('notification sans memberId (ignorée)');
+  if (!memberId) return ack('notification without memberId (ignored)');
 
   const store = getStore('submissions');
   let record;
   try {
     record = await store.get(memberId, { type: 'json' });
   } catch (err) {
-    console.error('webhook: lecture Blobs', err);
-    return ack('erreur lecture stockage');
+    console.error('webhook: Blobs read', err);
+    return ack('storage read error');
   }
-  if (!record) return ack('aucune soumission (déjà traitée ou expirée)');
+  if (!record) return ack('no submission (already handled or expired)');
 
-  // --- Vérification serveur : relire le checkout-intent -----------------------
+  // --- Server-side verification: re-read the checkout-intent ------------------
   let intent;
   try {
     intent = await getCheckoutIntent(record.checkoutIntentId);
   } catch (err) {
-    console.error('webhook: vérif HelloAsso', err);
-    return ack('vérification HelloAsso indisponible');
+    console.error('webhook: HelloAsso verify', err);
+    return ack('HelloAsso verification unavailable');
   }
-  if (!isCheckoutPaid(intent)) return ack('paiement non confirmé');
+  if (!isCheckoutPaid(intent)) return ack('payment not confirmed');
 
   const order = intent.order || {};
   const paymentId = extractPaymentReference(intent) || String(record.checkoutIntentId);
 
-  // --- Déduplication (webhook rejoué) -----------------------------------------
+  // --- Deduplication (replayed webhook) ---------------------------------------
   try {
     if (await columnContains(PAIEMENT_COL_INDEX, paymentId)) {
       await store.delete(memberId);
-      return ack('déjà enregistré');
+      return ack('already recorded');
     }
   } catch (err) {
-    // En cas d'échec de lecture, on continue : le risque de doublon est faible
-    // et préférable à un adhérent payé non enregistré.
-    console.error('webhook: dédup', err);
+    // On a read failure we continue: the risk of a duplicate is low and
+    // preferable to a paid member not being recorded.
+    console.error('webhook: dedup', err);
   }
 
   const pay = {
@@ -91,13 +91,13 @@ export default async (req) => {
   try {
     await appendRow(buildSheetRow(record.submission, pay));
   } catch (err) {
-    // On NE purge PAS le blob : on veut pouvoir rejouer/écrire manuellement.
-    console.error('webhook: écriture Sheet', err);
-    return ack('échec écriture Sheet (blob conservé pour rejeu)');
+    // We do NOT purge the blob: we want to be able to replay/write manually.
+    console.error('webhook: Sheet write', err);
+    return ack('Sheet write failed (blob kept for replay)');
   }
 
   await store.delete(memberId);
-  return ack('adhérent enregistré');
+  return ack('member recorded');
 };
 
 function ack(msg) {

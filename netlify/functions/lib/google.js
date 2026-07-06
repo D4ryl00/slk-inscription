@@ -1,5 +1,5 @@
-// Écriture dans le Google Sheet via l'API Sheets UNIQUEMENT (pas de Drive).
-// Le compte de service doit avoir le Sheet partagé en « Éditeur ».
+// Writes to the Google Sheet through the Sheets API ONLY (no Drive).
+// The service account must have the Sheet shared as an "Editor".
 
 import { google } from 'googleapis';
 import { FORM_COLUMNS } from '../../../src/shared/config.js';
@@ -7,10 +7,10 @@ import { FORM_COLUMNS } from '../../../src/shared/config.js';
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
 const TAB = process.env.GOOGLE_SHEET_TAB || 'Feuille 1';
 
-/** Charge les identifiants du compte de service depuis l'env (JSON ou base64:JSON). */
+/** Loads the service account credentials from env (JSON or base64:JSON). */
 function loadServiceAccount() {
   let raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!raw) throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON manquant.');
+  if (!raw) throw new Error('Missing GOOGLE_SERVICE_ACCOUNT_JSON.');
   if (raw.startsWith('base64:')) {
     raw = Buffer.from(raw.slice('base64:'.length), 'base64').toString('utf8');
   }
@@ -20,7 +20,7 @@ function loadServiceAccount() {
 let _sheets;
 async function getSheets() {
   if (_sheets) return _sheets;
-  if (!SHEET_ID) throw new Error('GOOGLE_SHEET_ID manquant.');
+  if (!SHEET_ID) throw new Error('Missing GOOGLE_SHEET_ID.');
   const creds = loadServiceAccount();
   const auth = new google.auth.JWT({
     email: creds.client_email,
@@ -34,10 +34,10 @@ async function getSheets() {
 let _headersEnsured = false;
 
 /**
- * Écrit la ligne d'en-têtes (FORM_COLUMNS) en A1 SI le tableau est vide.
- * Idempotent : ne touche à rien si la 1re ligne contient déjà quelque chose
- * (en-têtes déjà posés ou données saisies à la main). Le résultat est mémorisé
- * pour ne pas relire le Sheet à chaque `append` d'un même cold start.
+ * Writes the header row (FORM_COLUMNS) at A1 IF the sheet is empty.
+ * Idempotent: touches nothing if the first row already holds something (headers
+ * already written or data entered by hand). The result is memoized so we do not
+ * re-read the Sheet on every `append` within the same cold start.
  */
 export async function ensureHeaders() {
   if (_headersEnsured) return;
@@ -60,11 +60,11 @@ export async function ensureHeaders() {
 }
 
 /**
- * Ajoute une ligne sur la PREMIÈRE ligne vide du tableau.
- * `append` détecte la fin des données et insère juste après — les lignes
- * ajoutées à la main par le bureau cohabitent sans être écrasées.
- * On garantit d'abord la présence des en-têtes (Sheet neuf → 1re ligne posée).
- * @param {(string|number)[]} values dans l'ordre exact des colonnes
+ * Appends a row at the FIRST empty row of the sheet.
+ * `append` detects the end of the data and inserts right after — rows added by
+ * hand by the office coexist without being overwritten.
+ * We first ensure the headers exist (new Sheet → first row written).
+ * @param {(string|number)[]} values in the exact column order
  */
 export async function appendRow(values) {
   const sheets = await getSheets();
@@ -79,7 +79,7 @@ export async function appendRow(values) {
 }
 
 /**
- * Récupère les valeurs d'une colonne (par index 0-based) pour la déduplication.
+ * Fetches a column's values (by 0-based index) for deduplication.
  * @returns {Promise<string[]>}
  */
 export async function getColumnValues(colIndex) {
@@ -92,7 +92,7 @@ export async function getColumnValues(colIndex) {
   return (res.data.values || []).map((r) => r[0] ?? '');
 }
 
-/** Vrai si `token` apparaît déjà dans la colonne (paiement déjà enregistré). */
+/** True if `token` already appears in the column (payment already recorded). */
 export async function columnContains(colIndex, token) {
   if (!token) return false;
   const values = await getColumnValues(colIndex);
@@ -111,6 +111,6 @@ function columnLetter(index) {
 }
 
 function quoteTab(tab) {
-  // Échappe le nom d'onglet pour la notation A1 (espaces, apostrophes).
+  // Escapes the tab name for A1 notation (spaces, apostrophes).
   return `'${tab.replace(/'/g, "''")}'`;
 }

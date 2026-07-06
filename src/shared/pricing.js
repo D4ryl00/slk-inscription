@@ -1,6 +1,6 @@
-// Calcul du prix — SOURCE DE VÉRITÉ, exécutée côté serveur (create-checkout).
-// Le front importe le même module pour l'AFFICHAGE, mais ne décide jamais du
-// montant réellement facturé. Tous les montants internes sont en CENTIMES.
+// Price computation — SOURCE OF TRUTH, run server-side (create-checkout).
+// The front imports the same module for DISPLAY, but never decides the amount
+// actually charged. All internal amounts are in CENTS.
 
 import {
   AIDS,
@@ -16,14 +16,14 @@ export const formatEuros = (c) =>
   new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(c / 100);
 
 /**
- * Calcule le prix d'une adhésion.
+ * Computes the price of a membership.
  *
  * @param {object} selection
  * @param {string} selection.offerId
  * @param {'1x'|'3x'} selection.paymentPlan
- * @param {number} [selection.familyAlreadyRegistered=0] membres du foyer déjà inscrits
+ * @param {number} [selection.familyAlreadyRegistered=0] household members already registered
  * @param {{type?: 'passsport'|'peps'|null, code?: string}} [selection.aid]
- * @param {{method: string, amount: number}[]} [selection.offlinePayments] montants (€) réglés hors ligne
+ * @param {{method: string, amount: number}[]} [selection.offlinePayments] amounts (€) paid offline
  * @returns {{
  *   ok: boolean, error?: string,
  *   offer?: object, plan?: object,
@@ -43,12 +43,12 @@ export function computePrice(selection) {
 
   const baseCents = toCents(offer.priceAnnual);
 
-  // --- Réduction famille (forfait incrémental selon les membres déjà inscrits) --
+  // --- Family discount (incremental flat amount based on already-registered members) --
   const familyDiscountCents = toCents(
     familyIncrementalDiscount(selection.familyAlreadyRegistered || 0),
   );
 
-  // --- Aide (PEPS / Pass'Sport), déduite uniquement si un code est saisi ------
+  // --- Aid (PEPS / Pass'Sport), deducted only if a code is entered ------------
   let aidCents = 0;
   let aidApplied = null;
   const aidType = selection?.aid?.type;
@@ -62,11 +62,11 @@ export function computePrice(selection) {
     aidApplied = { type: aidType, label: aid.label, code, amountCents: aidCents };
   }
 
-  // Total dû (cotisation nette) — ne peut jamais passer sous 0.
+  // Total due (net fee) — can never go below 0.
   const totalCents = Math.max(0, baseCents - familyDiscountCents - aidCents);
 
-  // --- Règlements hors ligne (chèque, chèques vacances, espèces) --------------
-  // Chaque montant est déduit de ce qui reste à payer en CB sur HelloAsso.
+  // --- Offline payments (cheque, holiday vouchers, cash) ----------------------
+  // Each amount is deducted from what remains to be paid by card on HelloAsso.
   const offlinePayments = [];
   let offlineTotalCents = 0;
   for (const p of selection?.offlinePayments || []) {
@@ -82,7 +82,7 @@ export function computePrice(selection) {
   if (offlineTotalCents > totalCents) {
     return { ok: false, error: 'Les règlements hors ligne dépassent le total dû.' };
   }
-  const cbAmountCents = totalCents - offlineTotalCents; // payé en ligne (peut être 0)
+  const cbAmountCents = totalCents - offlineTotalCents; // paid online (may be 0)
 
   return {
     ok: true,
@@ -101,12 +101,12 @@ export function computePrice(selection) {
 }
 
 /**
- * Construit les échéances pour le Checkout HelloAsso.
- * 1x → un seul terme aujourd'hui. 3x → 3 termes mensuels dont la somme est
- * EXACTEMENT le total (le reliquat d'arrondi va sur la 1re échéance).
+ * Builds the installments for the HelloAsso Checkout.
+ * 1x → a single term today. 3x → 3 monthly terms whose sum is EXACTLY the total
+ * (the rounding remainder goes on the first installment).
  *
  * @returns {{ initialAmount: number, terms: {amount:number, date:string}[] }}
- *          montants en centimes ; dates ISO (AAAA-MM-JJ).
+ *          amounts in cents; ISO dates (YYYY-MM-DD).
  */
 export function buildInstallments(totalCents, paymentPlan, startDate = new Date()) {
   const n = PAYMENT_PLANS[paymentPlan]?.installments || 1;
@@ -122,7 +122,7 @@ export function buildInstallments(totalCents, paymentPlan, startDate = new Date(
   for (let i = 0; i < n; i++) {
     const d = new Date(startDate);
     d.setMonth(d.getMonth() + i);
-    // La 1re échéance absorbe le reliquat pour que la somme = total exact.
+    // The first installment absorbs the remainder so the sum = exact total.
     terms.push({ amount: i === 0 ? even + remainder : even, date: isoDate(d) });
   }
   return { initialAmount: terms[0].amount, terms };

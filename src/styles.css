@@ -89,7 +89,7 @@ button[type="submit"]:disabled { opacity: 0.6; cursor: default; }
 .error { color: var(--error); font-weight: 600; min-height: 1.2em; }
 .hidden { display: none; }
 
-/* Astérisque rouge des champs obligatoires */
+/* Red asterisk for required fields */
 .req { color: var(--error); font-weight: 700; }
 
 a { color: var(--brand); }
@@ -97,7 +97,7 @@ a { color: var(--brand); }
 .docs ul { margin: 6px 0 0; padding-left: 18px; }
 .docs ul li { padding: 2px 0; border: 0; }
 
-/* Pages de retour */
+/* Return pages */
 .result { max-width: 560px; margin: 8vh auto; text-align: center; padding: 0 16px; }
 .result .card { text-align: left; }
 .badge { font-size: 2.4rem; }

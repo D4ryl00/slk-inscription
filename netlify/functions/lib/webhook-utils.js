@@ -1,18 +1,18 @@
-// Helpers PURS pour le traitement des notifications HelloAsso (aucun I/O),
-// isolés pour être testables. Le webhook s'appuie dessus pour le parsing, mais
-// la SOURCE DE VÉRITÉ du paiement reste la relecture du checkout-intent via API.
+// PURE helpers for processing HelloAsso notifications (no I/O), isolated to be
+// testable. The webhook relies on them for parsing, but the SOURCE OF TRUTH for
+// the payment remains the re-read of the checkout-intent through the API.
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
 /**
- * Vérifie l'authenticité d'une notification HelloAsso.
- * Signature = HMAC-SHA256(corps BRUT, signatureKey), encodée en hexadécimal
- * minuscule, transmise dans le header `x-ha-signature`. Comparaison à temps
- * constant. ⚠️ Fonctionnalité réservée aux partenaires : si aucune clé n'est
- * configurée, le webhook s'en remet à la revérification via l'API.
- * @param {string} rawBody corps brut de la requête (pas le JSON re-sérialisé)
- * @param {string} signatureHex valeur du header x-ha-signature
- * @param {string} signatureKey clé secrète de l'URL de notification
+ * Verifies the authenticity of a HelloAsso notification.
+ * Signature = HMAC-SHA256(RAW body, signatureKey), encoded as lowercase hex,
+ * sent in the `x-ha-signature` header. Constant-time comparison. ⚠️ Partner-only
+ * feature: if no key is configured, the webhook falls back to re-verification
+ * through the API.
+ * @param {string} rawBody raw request body (not the re-serialized JSON)
+ * @param {string} signatureHex value of the x-ha-signature header
+ * @param {string} signatureKey secret key from the notification URL
  * @returns {boolean}
  */
 export function verifyHelloAssoSignature(rawBody, signatureHex, signatureKey) {
@@ -20,15 +20,15 @@ export function verifyHelloAssoSignature(rawBody, signatureHex, signatureKey) {
   const expected = createHmac('sha256', signatureKey).update(rawBody, 'utf8').digest('hex');
   const expectedBuf = Buffer.from(expected);
   const providedBuf = Buffer.from(String(signatureHex));
-  if (expectedBuf.length !== providedBuf.length) return false; // timingSafeEqual exige l'égalité
+  if (expectedBuf.length !== providedBuf.length) return false; // timingSafeEqual requires equal length
   return timingSafeEqual(expectedBuf, providedBuf);
 }
 
 /**
- * Extrait le `memberId` d'une notification HelloAsso.
- * Format documenté : { eventType, data, metadata } — `metadata` à la racine
- * (renvoie ce qui a été passé à la création du checkout-intent). On tolère aussi
- * `data.metadata` par sécurité.
+ * Extracts the `memberId` from a HelloAsso notification.
+ * Documented format: { eventType, data, metadata } — `metadata` at the root
+ * (returns whatever was passed when creating the checkout-intent). We also
+ * tolerate `data.metadata` as a safety net.
  * @returns {string|null}
  */
 export function extractMemberId(payload) {

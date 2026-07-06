@@ -1,6 +1,6 @@
-// Tests des helpers PURS du webhook HelloAsso : parsing de la notification
-// (format documenté { eventType, data, metadata }) et interprétation du
-// checkout-intent relu via l'API (états de paiement, référence).
+// Tests for the PURE HelloAsso webhook helpers: parsing the notification
+// (documented format { eventType, data, metadata }) and interpreting the
+// checkout-intent re-read through the API (payment states, reference).
 
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
@@ -13,9 +13,9 @@ import {
 } from '../netlify/functions/lib/helloasso.js';
 import { extractMemberId, verifyHelloAssoSignature } from '../netlify/functions/lib/webhook-utils.js';
 
-// --- extractMemberId : format de notification ---------------------------------
+// --- extractMemberId: notification format -------------------------------------
 
-test('extractMemberId : metadata à la racine (format documenté)', () => {
+test('extractMemberId: metadata at the root (documented format)', () => {
   const payload = {
     eventType: 'Payment',
     data: { id: 1, state: 'Authorized' },
@@ -24,42 +24,42 @@ test('extractMemberId : metadata à la racine (format documenté)', () => {
   assert.equal(extractMemberId(payload), 'abc-123');
 });
 
-test('extractMemberId : toléré aussi sous data.metadata', () => {
+test('extractMemberId: also tolerated under data.metadata', () => {
   assert.equal(extractMemberId({ data: { metadata: { memberId: 'z' } } }), 'z');
 });
 
-test('extractMemberId : absent ou payload vide → null', () => {
+test('extractMemberId: absent or empty payload → null', () => {
   assert.equal(extractMemberId({ eventType: 'Payment', data: {} }), null);
   assert.equal(extractMemberId({ metadata: {} }), null);
   assert.equal(extractMemberId({}), null);
   assert.equal(extractMemberId(null), null);
 });
 
-// --- isCheckoutPaid : états de paiement ---------------------------------------
+// --- isCheckoutPaid: payment states -------------------------------------------
 
-test('isCheckoutPaid : Authorized ou Registered → payé', () => {
+test('isCheckoutPaid: Authorized or Registered → paid', () => {
   assert.equal(isCheckoutPaid({ order: { payments: [{ state: 'Authorized' }] } }), true);
   assert.equal(isCheckoutPaid({ order: { payments: [{ state: 'Registered' }] } }), true);
 });
 
-test('isCheckoutPaid : Pending / Refused / Refunded / Unknown → non payé', () => {
+test('isCheckoutPaid: Pending / Refused / Refunded / Unknown → not paid', () => {
   for (const state of ['Pending', 'Refused', 'Refunded', 'Unknown']) {
     assert.equal(
       isCheckoutPaid({ order: { payments: [{ state }] } }),
       false,
-      `état ${state} ne doit pas compter comme payé`,
+      `state ${state} must not count as paid`,
     );
   }
 });
 
-test('isCheckoutPaid : pas de commande / pas de paiement → non payé', () => {
+test('isCheckoutPaid: no order / no payment → not paid', () => {
   assert.equal(isCheckoutPaid({}), false);
   assert.equal(isCheckoutPaid({ order: {} }), false);
   assert.equal(isCheckoutPaid({ order: { payments: [] } }), false);
   assert.equal(isCheckoutPaid(null), false);
 });
 
-test('isCheckoutPaid : un paiement valide parmi plusieurs suffit', () => {
+test('isCheckoutPaid: one valid payment among several is enough', () => {
   const intent = { order: { payments: [{ state: 'Refused' }, { state: 'Authorized' }] } };
   assert.equal(isCheckoutPaid(intent), true);
 });
@@ -68,46 +68,46 @@ test('PAID_STATES = [Authorized, Registered]', () => {
   assert.deepEqual(PAID_STATES, ['Authorized', 'Registered']);
 });
 
-// --- extractPaymentReference : déduplication ----------------------------------
+// --- extractPaymentReference: deduplication -----------------------------------
 
-test('extractPaymentReference : id de commande prioritaire, chaîne', () => {
+test('extractPaymentReference: order id takes priority, string', () => {
   assert.equal(
     extractPaymentReference({ order: { id: 12345, payments: [{ id: 9 }] } }),
     '12345',
   );
 });
 
-test('extractPaymentReference : repli sur le 1er paiement, sinon null', () => {
+test('extractPaymentReference: falls back to the first payment, otherwise null', () => {
   assert.equal(extractPaymentReference({ order: { payments: [{ id: 9 }] } }), '9');
   assert.equal(extractPaymentReference({ order: {} }), null);
   assert.equal(extractPaymentReference({}), null);
   assert.equal(extractPaymentReference(null), null);
 });
 
-// --- verifyHelloAssoSignature : authenticité (HMAC-SHA256 hex) -----------------
+// --- verifyHelloAssoSignature: authenticity (HMAC-SHA256 hex) ------------------
 
 const SIG_KEY = 'test-signature-key';
 const SIG_BODY = '{"eventType":"Payment","metadata":{"memberId":"abc"}}';
 const sign = (body, key) => createHmac('sha256', key).update(body, 'utf8').digest('hex');
 
-test('verifyHelloAssoSignature : signature correcte → true', () => {
+test('verifyHelloAssoSignature: correct signature → true', () => {
   assert.equal(verifyHelloAssoSignature(SIG_BODY, sign(SIG_BODY, SIG_KEY), SIG_KEY), true);
 });
 
-test('verifyHelloAssoSignature : corps altéré → false', () => {
+test('verifyHelloAssoSignature: tampered body → false', () => {
   assert.equal(verifyHelloAssoSignature(SIG_BODY + ' ', sign(SIG_BODY, SIG_KEY), SIG_KEY), false);
 });
 
-test('verifyHelloAssoSignature : mauvaise clé → false', () => {
-  assert.equal(verifyHelloAssoSignature(SIG_BODY, sign(SIG_BODY, 'autre-cle'), SIG_KEY), false);
+test('verifyHelloAssoSignature: wrong key → false', () => {
+  assert.equal(verifyHelloAssoSignature(SIG_BODY, sign(SIG_BODY, 'other-key'), SIG_KEY), false);
 });
 
-test('verifyHelloAssoSignature : signature absente ou clé absente → false', () => {
+test('verifyHelloAssoSignature: missing signature or missing key → false', () => {
   assert.equal(verifyHelloAssoSignature(SIG_BODY, '', SIG_KEY), false);
   assert.equal(verifyHelloAssoSignature(SIG_BODY, undefined, SIG_KEY), false);
   assert.equal(verifyHelloAssoSignature(SIG_BODY, sign(SIG_BODY, SIG_KEY), ''), false);
 });
 
-test('verifyHelloAssoSignature : longueur différente → false (sans exception)', () => {
+test('verifyHelloAssoSignature: different length → false (no exception)', () => {
   assert.equal(verifyHelloAssoSignature(SIG_BODY, 'deadbeef', SIG_KEY), false);
 });

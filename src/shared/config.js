@@ -1,28 +1,28 @@
-// Configuration métier partagée entre le front (navigateur) et les fonctions (Node).
-// Module ESM pur, sans dépendance : ne rien importer de spécifique à Node ici.
+// Business configuration shared between the front (browser) and the functions
+// (Node). Pure ESM module, no dependency: do not import anything Node-specific.
 //
-// ⚠️ VALEURS À CONFIRMER chaque saison — voir les commentaires « À CONFIRMER ».
+// ⚠️ VALUES TO CONFIRM every season — see the "À CONFIRMER" comments.
 
 /**
- * Disciplines proposées par le club.
- * `contact: true` déclenche l'exigence médicale renforcée (fond d'œil + ECG)
- * pour les MAJEURS qui combattent au KO — cf. note FFKarate. Le karaté Shidokan
- * est un karaté full-contact (KO), au même titre que le Shido-Boxing / Shido-Mix-Martial.
+ * Disciplines offered by the club.
+ * `contact: true` triggers the stricter medical requirement (fundus exam + ECG)
+ * for ADULTS who fight with KO — cf. FFKarate note. Shidokan karate is a
+ * full-contact (KO) karate, just like Shido-Boxing / Shido-Mix-Martial.
  */
 export const DISCIPLINES = {
   karate: { label: 'Karaté Shidokan', contact: true },
   mma: { label: 'Shido-Mix-Martial', contact: true },
   boxing: { label: 'Shido-Boxing', contact: true },
-  // À CONFIRMER : le Cardio Budo (fitness) implique-t-il fond d'œil + ECG ?
-  // Par défaut considéré NON-contact (pas de sparring / compétition).
+  // TODO CONFIRM: does Cardio Budo (fitness) require a fundus exam + ECG?
+  // Treated as NON-contact by default (no sparring / competition).
   cardio: { label: 'Cardio Budo Kick-Boxing', contact: false },
 };
 
 /**
- * Offres d'adhésion = ce qui est réellement vendu (reprend la campagne actuelle).
- * `priceAnnual` en euros (montant total sur la saison).
- * ⚠️ À CONFIRMER / COMPLÉTER : liste et tarifs repris de la capture HelloAsso
- * 2025-2026 ; ajouter un éventuel tarif « Karaté seul » s'il existe.
+ * Membership offers = what is actually sold (mirrors the current campaign).
+ * `priceAnnual` in euros (total amount for the season).
+ * ⚠️ TO CONFIRM / COMPLETE: list and prices taken from the HelloAsso 2025-2026
+ * screenshot; add a possible "Karaté seul" price if one exists.
  */
 export const OFFERS = [
   {
@@ -76,15 +76,15 @@ export const OFFERS = [
   },
 ];
 
-/** Plans de paiement supportés par le Checkout HelloAsso. */
+/** Payment plans supported by the HelloAsso Checkout. */
 export const PAYMENT_PLANS = {
   '1x': { label: 'Paiement en 1 fois', installments: 1 },
   '3x': { label: 'Paiement en 3 fois', installments: 3 },
 };
 
 /**
- * Aides financières déduites en ligne.
- * `amount` en euros. ⚠️ À CONFIRMER chaque saison (les barèmes évoluent).
+ * Financial aids deducted online.
+ * `amount` in euros. ⚠️ TO CONFIRM every season (the scales change).
  */
 export const AIDS = {
   passsport: {
@@ -94,8 +94,8 @@ export const AIDS = {
     column: "Aide Pass'Sport",
   },
   peps: {
-    // Le PEPS est aussi appelé « Prime Enfant » (c'est une aide, pas un moyen de paiement).
-    // Pas de code en ligne : l'adhérent rapporte le formulaire PEPS + les pièces au bureau.
+    // PEPS is also called "Prime Enfant" (it's an aid, not a payment method).
+    // No online code: the member brings the PEPS form + documents to the office.
     label: 'PEPS (Prime Enfant)',
     amount: 30,
     requiresCode: false,
@@ -104,10 +104,10 @@ export const AIDS = {
 };
 
 /**
- * Moyens de paiement HORS LIGNE (encaissés au bureau). Le montant saisi pour
- * chacun est DÉDUIT de ce qui reste à payer en CB sur HelloAsso. Si le total
- * hors ligne couvre toute la cotisation, aucun paiement en ligne n'a lieu.
- * NB : « Prime Enfant » n'est pas un moyen de paiement — c'est l'aide PEPS (cf. AIDS).
+ * OFFLINE payment methods (collected at the office). The amount entered for each
+ * is DEDUCTED from what remains to be paid by card on HelloAsso. If the offline
+ * total covers the whole fee, no online payment happens.
+ * NB: "Prime Enfant" is not a payment method — it's the PEPS aid (cf. AIDS).
  */
 export const PAYMENT_METHODS = {
   cheque: { label: 'Chèque(s)' },
@@ -116,28 +116,28 @@ export const PAYMENT_METHODS = {
 };
 
 /**
- * Réduction famille — forfait selon le NOMBRE TOTAL de membres du foyer.
- * Source : formulaire Jotform 2025-2026.
- *   2 membres → −50 € · 3 → −70 € · 4 (et +) → −100 €
+ * Family discount — flat amount based on the TOTAL NUMBER of household members.
+ * Source: Jotform 2025-2026 form.
+ *   2 members → −50 € · 3 → −70 € · 4 (and +) → −100 €
  *
- * ⚠️ Ce forfait s'applique UNE FOIS pour toute la famille. Il ne peut donc être
- * appliqué correctement que sur une commande couvrant TOUS les membres (un seul
- * paiement pour N adhérents). En flux « un adhérent = un paiement », laisser
- * `enabled: false` pour éviter de déduire le forfait plusieurs fois.
+ * ⚠️ This flat amount applies ONCE for the whole family. It can therefore only
+ * be applied correctly on an order covering ALL members (a single payment for N
+ * members). In a "one member = one payment" flow, leave `enabled: false` to
+ * avoid deducting the discount several times.
  */
 export const FAMILY_DISCOUNT = {
   enabled: true,
-  // Forfait CUMULÉ pour toute la famille selon le nombre total de membres inscrits.
-  // Appliqué une seule fois, réparti de façon incrémentale au fil des inscriptions
-  // (1 adhérent = 1 formulaire ; on demande combien de membres sont déjà inscrits).
+  // CUMULATIVE flat amount for the whole family based on the total number of
+  // registered members. Applied once, spread incrementally across registrations
+  // (1 member = 1 form; we ask how many members are already registered).
   tiers: [
     { members: 2, total: 50 },
     { members: 3, total: 70 },
-    { members: 4, total: 100 }, // 4 membres ou plus (plafond)
+    { members: 4, total: 100 }, // 4 members or more (cap)
   ],
 };
 
-/** Forfait famille CUMULÉ pour `members` membres au total (0 / 50 / 70 / 100). */
+/** CUMULATIVE family flat amount for `members` members total (0 / 50 / 70 / 100). */
 export function familyDiscountTotal(members) {
   let total = 0;
   for (const t of FAMILY_DISCOUNT.tiers) if (members >= t.members) total = t.total;
@@ -145,9 +145,9 @@ export function familyDiscountTotal(members) {
 }
 
 /**
- * Remise à appliquer pour UN nouvel adhérent, sachant combien de membres de sa
- * famille sont DÉJÀ inscrits. = cumul(après) − cumul(avant), afin que la remise
- * totale de la famille corresponde au barème et ne soit comptée qu'une fois.
+ * Discount to apply for ONE new member, given how many of their family members
+ * are ALREADY registered. = cumulative(after) − cumulative(before), so the total
+ * family discount matches the scale and is counted only once.
  */
 export function familyIncrementalDiscount(alreadyRegistered) {
   if (!FAMILY_DISCOUNT.enabled) return 0;
@@ -156,8 +156,8 @@ export function familyIncrementalDiscount(alreadyRegistered) {
 }
 
 /**
- * Grades Shidokan (liste déroulante conditionnelle à la section Karaté),
- * du débutant au plus gradé. Ordre fourni par le club.
+ * Shidokan grades (dropdown conditional on the Karate section), from beginner to
+ * highest grade. Order provided by the club.
  */
 export const GRADES_SHIDOKAN = [
   '10e kyu — ceinture blanche',
@@ -179,9 +179,9 @@ export const GRADES_SHIDOKAN = [
 ];
 
 /**
- * Motivations proposées (cases à cocher, choix multiple).
- * Affichées pour le Karaté ET pour le Boxing/MMA ; les entrées listées dans
- * `MOTIVATIONS_KARATE_ONLY` sont réservées aux formules incluant le karaté.
+ * Offered motivations (checkboxes, multiple choice).
+ * Shown for Karate AND for Boxing/MMA; the entries listed in
+ * `MOTIVATIONS_KARATE_ONLY` are reserved for offers that include karate.
  */
 export const MOTIVATIONS = [
   'Sport Loisir',
@@ -189,17 +189,17 @@ export const MOTIVATIONS = [
   'Compétition',
 ];
 
-/** Motivations réservées aux formules incluant le karaté (masquées pour Boxing/MMA). */
+/** Motivations reserved for offers including karate (hidden for Boxing/MMA). */
 export const MOTIVATIONS_KARATE_ONLY = ['Karaté loisir ceinture noire'];
 
 /**
- * Colonnes ÉCRITES PAR LE SITE, dans l'ordre, à partir de la colonne A du Sheet.
- * Le webhook fait un `append` de ces colonnes uniquement.
- * ⚠️ NE PAS RÉORDONNER : l'écriture est POSITIONNELLE (par index, pas par nom).
- * Les libellés sont libres/cosmétiques (lisibilité humaine du Sheet) ; seul
- * l'ORDRE compte. La 1re ligne du Google Sheet reprend ces en-têtes.
- * ⚠️ Si vous renommez « Paiement en ligne », mettez à jour `PAIEMENT_COL_INDEX`
- * dans sheet-row.js (déduplication du webhook).
+ * Columns WRITTEN BY THE SITE, in order, starting at column A of the Sheet.
+ * The webhook `append`s these columns only.
+ * ⚠️ DO NOT REORDER: the write is POSITIONAL (by index, not by name).
+ * The labels are free/cosmetic (human readability of the Sheet); only the ORDER
+ * matters. The first row of the Google Sheet uses these headers.
+ * ⚠️ If you rename "Paiement en ligne", update `PAIEMENT_COL_INDEX` in
+ * sheet-row.js (webhook deduplication).
  */
 export const FORM_COLUMNS = [
   'Date de soumission',
@@ -232,15 +232,15 @@ export const FORM_COLUMNS = [
   'Aide Pass\'Sport',
 ];
 
-/** Jours proposés pour le Cardio Budo (À CONFIRMER avec le planning du club). */
+/** Days offered for Cardio Budo (TO CONFIRM with the club schedule). */
 export const CARDIO_DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
 
-/** Utilitaire : retrouver une offre par son id. */
+/** Utility: find an offer by its id. */
 export function getOffer(offerId) {
   return OFFERS.find((o) => o.id === offerId) || null;
 }
 
-/** Une offre est « discipline de contact » si l'une de ses disciplines l'est. */
+/** An offer is a "contact discipline" if any of its disciplines is. */
 export function offerIsContact(offer) {
   if (!offer) return false;
   return offer.disciplines.some((d) => DISCIPLINES[d]?.contact);

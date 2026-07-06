@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 
-// Front multi-pages : le formulaire (index) + les pages de retour de paiement.
+// Multi-page front: the form (index) + the payment return pages.
 export default defineConfig({
   root: 'src',
   publicDir: resolve(__dirname, 'public'),

@@ -1,7 +1,7 @@
-// Client minimal de l'API HelloAsso v5 (OAuth client_credentials + Checkout).
-// Utilise le `fetch` global de Node ≥ 18. Aucune dépendance externe.
+// Minimal HelloAsso v5 API client (OAuth client_credentials + Checkout).
+// Uses Node's global `fetch` (Node >= 18). No external dependency.
 //
-// Doc : https://dev.helloasso.com/docs/int%C3%A9grer-le-paiement-sur-votre-site
+// Docs: https://dev.helloasso.com/docs/int%C3%A9grer-le-paiement-sur-votre-site
 
 const ENV = (process.env.HELLOASSO_ENV || 'sandbox').toLowerCase();
 const BASE = ENV === 'prod' ? 'https://api.helloasso.com' : 'https://api.helloasso-sandbox.com';
@@ -15,10 +15,10 @@ function assertConfig() {
   if (!CLIENT_ID) missing.push('HELLOASSO_CLIENT_ID');
   if (!CLIENT_SECRET) missing.push('HELLOASSO_CLIENT_SECRET');
   if (!ORG_SLUG) missing.push('HELLOASSO_ORG_SLUG');
-  if (missing.length) throw new Error(`Config HelloAsso manquante : ${missing.join(', ')}`);
+  if (missing.length) throw new Error(`Missing HelloAsso config: ${missing.join(', ')}`);
 }
 
-/** Récupère un jeton d'accès (grant client_credentials). */
+/** Fetches an access token (client_credentials grant). */
 export async function getAccessToken() {
   assertConfig();
   const res = await fetch(`${BASE}/oauth2/token`, {
@@ -31,22 +31,25 @@ export async function getAccessToken() {
     }),
   });
   if (!res.ok) {
-    throw new Error(`OAuth HelloAsso échoué (${res.status}) : ${await safeText(res)}`);
+    throw new Error(`HelloAsso OAuth failed (${res.status}): ${await safeText(res)}`);
   }
   const json = await res.json();
   return json.access_token;
 }
 
 /**
- * Crée un checkout-intent.
+ * Creates a checkout-intent.
  * @param {object} p
- * @param {number} p.totalAmount  centimes
- * @param {number} p.initialAmount centimes (1re échéance, = total si 1x)
- * @param {{amount:number,date:string}[]} [p.terms] échéances (centimes)
- * @param {string} p.itemName     libellé (max 250 car.)
+ * @param {number} p.totalAmount  cents
+ * @param {number} p.initialAmount cents (first installment, = total for 1x)
+ * @param {{amount:number,date:string}[]} [p.terms] ALL installments, first one
+ *        included (cents). HelloAsso only wants the SUBSEQUENT installments in
+ *        `terms` (the first is already described by `initialAmount`), so we drop
+ *        the first before sending. We require initialAmount + Σterms = totalAmount.
+ * @param {string} p.itemName     label (max 250 chars)
  * @param {boolean} [p.containsDonation=false]
  * @param {object} p.payer        { firstName, lastName, email, ... }
- * @param {object} p.metadata     renvoyé UNIQUEMENT dans la notification (webhook)
+ * @param {object} p.metadata     returned ONLY in the notification (webhook)
  * @param {string} p.returnUrl @param {string} p.backUrl @param {string} p.errorUrl
  * @returns {Promise<{id:number, redirectUrl:string}>}
  */
@@ -63,7 +66,8 @@ export async function createCheckoutIntent(p) {
     payer: p.payer,
     metadata: p.metadata,
   };
-  if (p.terms && p.terms.length > 1) body.terms = p.terms;
+  // `terms` = installments AFTER the initial payment only.
+  if (p.terms && p.terms.length > 1) body.terms = p.terms.slice(1);
 
   const res = await fetch(`${BASE}/v5/organizations/${ORG_SLUG}/checkout-intents`, {
     method: 'POST',
@@ -74,14 +78,14 @@ export async function createCheckoutIntent(p) {
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    throw new Error(`Création checkout-intent échouée (${res.status}) : ${await safeText(res)}`);
+    throw new Error(`checkout-intent creation failed (${res.status}): ${await safeText(res)}`);
   }
   return res.json();
 }
 
 /**
- * Relit un checkout-intent pour VÉRIFIER le paiement (le webhook seul n'est pas
- * une preuve : son corps est falsifiable). Retourne l'objet HelloAsso.
+ * Re-reads a checkout-intent to VERIFY the payment (the webhook alone is not
+ * proof: its body can be forged). Returns the HelloAsso object.
  */
 export async function getCheckoutIntent(checkoutIntentId) {
   const token = await getAccessToken();
@@ -90,18 +94,18 @@ export async function getCheckoutIntent(checkoutIntentId) {
     { headers: { Authorization: `Bearer ${token}` } },
   );
   if (!res.ok) {
-    throw new Error(`Lecture checkout-intent échouée (${res.status}) : ${await safeText(res)}`);
+    throw new Error(`checkout-intent read failed (${res.status}): ${await safeText(res)}`);
   }
   return res.json();
 }
 
-/** États d'un paiement HelloAsso considérés comme réellement encaissés. */
+/** HelloAsso payment states considered as actually collected. */
 export const PAID_STATES = ['Authorized', 'Registered'];
 
 /**
- * Vrai si le checkout-intent correspond à un paiement réellement encaissé.
- * On EXIGE au moins un paiement dans un état valide (Authorized/Registered) ;
- * un paiement Pending/Refused/Refunded/Unknown ne compte pas.
+ * True if the checkout-intent corresponds to an actually collected payment.
+ * We REQUIRE at least one payment in a valid state (Authorized/Registered);
+ * a Pending/Refused/Refunded/Unknown payment does not count.
  */
 export function isCheckoutPaid(checkoutIntent) {
   const payments = checkoutIntent?.order?.payments || [];
@@ -109,8 +113,8 @@ export function isCheckoutPaid(checkoutIntent) {
 }
 
 /**
- * Référence de paiement pour la déduplication : id de la commande de préférence,
- * sinon id du 1er paiement. Renvoie une chaîne, ou null si aucune commande.
+ * Payment reference for deduplication: order id preferably, otherwise the first
+ * payment id. Returns a string, or null if there is no order.
  */
 export function extractPaymentReference(checkoutIntent) {
   const order = checkoutIntent?.order;
@@ -123,7 +127,7 @@ async function safeText(res) {
   try {
     return await res.text();
   } catch {
-    return '(corps illisible)';
+    return '(unreadable body)';
   }
 }
 

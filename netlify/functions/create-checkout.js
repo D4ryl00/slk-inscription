@@ -1,9 +1,9 @@
 // POST /api/create-checkout
-// Recalcule le prix (source de vérité) et le montant restant à payer en CB.
-//  - Reste CB > 0 : stocke la soumission dans Blobs + crée le checkout-intent
-//    HelloAsso ; la ligne Sheet est écrite au webhook, après paiement.
-//  - Reste CB = 0 (tout réglé hors ligne) : AUCUN passage par HelloAsso, la
-//    ligne est écrite DIRECTEMENT dans le Sheet.
+// Recomputes the price (source of truth) and the amount left to pay by card.
+//  - Card remainder > 0: stores the submission in Blobs + creates the HelloAsso
+//    checkout-intent; the Sheet row is written at the webhook, after payment.
+//  - Card remainder = 0 (everything paid offline): NO trip through HelloAsso,
+//    the row is written DIRECTLY into the Sheet.
 
 import { getStore } from '@netlify/blobs';
 import { buildInstallments, computePrice } from '../../src/shared/pricing.js';
@@ -30,7 +30,7 @@ export default async (req) => {
     return json({ error: 'L\'acceptation du règlement intérieur est obligatoire.' }, 400);
   }
 
-  // --- Prix : recalcul serveur, jamais celui envoyé par le front --------------
+  // --- Price: server-side recompute, never the one sent by the front ----------
   const price = computePrice({
     offerId: s.offerId,
     paymentPlan: s.paymentPlan,
@@ -43,7 +43,7 @@ export default async (req) => {
   const site = (process.env.SITE_URL || 'http://localhost:8888').replace(/\/$/, '');
   const planLabel = `CB ${s.paymentPlan}`;
 
-  // ─── Cas 100 % hors ligne : aucun paiement CB → écriture directe ────────────
+  // ─── 100% offline case: no card payment → direct write ──────────────────────
   if (price.cbAmountCents <= 0) {
     try {
       await appendRow(
@@ -59,13 +59,13 @@ export default async (req) => {
         }),
       );
     } catch (err) {
-      console.error('create-checkout: écriture Sheet (hors ligne)', err);
+      console.error('create-checkout: Sheet write (offline)', err);
       return json({ error: 'Erreur interne (enregistrement). Réessayez.' }, 500);
     }
     return json({ redirectUrl: `${site}/merci?offline=1` });
   }
 
-  // ─── Cas avec paiement CB ───────────────────────────────────────────────────
+  // ─── Card payment case ──────────────────────────────────────────────────────
   const memberId = crypto.randomUUID();
   const { initialAmount, terms } = buildInstallments(price.cbAmountCents, s.paymentPlan);
 
@@ -78,7 +78,7 @@ export default async (req) => {
       itemName: `Adhésion SLK — ${price.offer.label}`,
       containsDonation: false,
       payer: { firstName: s.prenom, lastName: s.nom, email: s.email },
-      // ⚠️ metadata n'est renvoyé QUE dans le webhook → c'est là qu'on retrouve memberId
+      // ⚠️ metadata is returned ONLY in the webhook → that's where we recover memberId
       metadata: { memberId, offerId: s.offerId, paymentPlan: s.paymentPlan, aidType: s.aid?.type || null },
       returnUrl: `${site}/merci?m=${memberId}`,
       backUrl: `${site}/`,
@@ -89,7 +89,7 @@ export default async (req) => {
     return json({ error: 'Impossible de contacter HelloAsso. Réessayez plus tard.' }, 502);
   }
 
-  // Stocke la soumission + le détail du prix (relus par le webhook via memberId).
+  // Stores the submission + price details (re-read by the webhook via memberId).
   try {
     const store = getStore('submissions');
     await store.setJSON(memberId, {
