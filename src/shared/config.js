@@ -261,8 +261,8 @@ export const FORM_COLUMNS = [
   'Aide Pass\'Sport',
 ];
 
-/** Days offered for Cardio Budo (TO CONFIRM with the club schedule). */
-export const CARDIO_DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+/** Days offered for Cardio Budo. */
+export const CARDIO_DAYS = ['Lundi', 'Vendredi', 'Samedi'];
 
 /** Utility: find an offer by its id. */
 export function getOffer(offerId) {
