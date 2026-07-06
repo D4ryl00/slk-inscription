@@ -4,11 +4,13 @@
 
 import {
   AIDS,
+  PASSEPORT_FFK,
   PASSEPORT_SHIDOKAN,
   PAYMENT_METHODS,
   PAYMENT_PLANS,
   familyIncrementalDiscount,
   getOffer,
+  offerIsContact,
 } from './config.js';
 
 const toCents = (euros) => Math.round(euros * 100);
@@ -25,6 +27,7 @@ export const formatEuros = (c) =>
  * @param {number} [selection.familyAlreadyRegistered=0] household members already registered
  * @param {{type?: 'passsport'|'peps'|null, code?: string}} [selection.aid]
  * @param {boolean} [selection.passeportShidokan] add the Passeport Shidokan (karate only)
+ * @param {boolean} [selection.passeportFfk] add the Passeport FFK (competitors, contact offers)
  * @param {{method: string, amount: number}[]} [selection.offlinePayments] amounts (€) paid offline
  * @returns {{
  *   ok: boolean, error?: string,
@@ -69,8 +72,13 @@ export function computePrice(selection) {
   const passeportCents =
     selection?.passeportShidokan && offerHasKarate ? toCents(PASSEPORT_SHIDOKAN.amount) : 0;
 
-  // Total due — net fee (never below 0) plus the optional Passeport Shidokan.
-  const totalCents = Math.max(0, baseCents - familyDiscountCents - aidCents) + passeportCents;
+  // --- Passeport FFK (optional, competitors on contact offers) ----------------
+  const passeportFfkCents =
+    selection?.passeportFfk && offerIsContact(offer) ? toCents(PASSEPORT_FFK.amount) : 0;
+
+  // Total due — net fee (never below 0) plus the optional passeport add-ons.
+  const totalCents =
+    Math.max(0, baseCents - familyDiscountCents - aidCents) + passeportCents + passeportFfkCents;
 
   // --- Offline payments (cheque, holiday vouchers, cash) ----------------------
   // Each amount is deducted from what remains to be paid by card on HelloAsso.
@@ -100,6 +108,7 @@ export function computePrice(selection) {
     aidCents,
     aidApplied,
     passeportCents,
+    passeportFfkCents,
     totalCents,
     currency: 'EUR',
     offlinePayments,

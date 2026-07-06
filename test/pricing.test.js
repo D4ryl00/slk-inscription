@@ -124,6 +124,37 @@ test('Passeport Shidokan: ignored on a non-karate offer', () => {
   assert.equal(p.totalCents, 18000);
 });
 
+test('Passeport FFK: karate offer + checked → +25 €', () => {
+  const p = computePrice({
+    offerId: 'karate-mix-boxing-adulte',
+    paymentPlan: '1x',
+    passeportFfk: true,
+  });
+  assert.equal(p.passeportFfkCents, 2500);
+  assert.equal(p.totalCents, 33000 + 2500);
+});
+
+test('Passeport FFK: boxing/mma offer + checked → +25 €', () => {
+  const p = computePrice({ offerId: 'mix-boxing-adulte', paymentPlan: '1x', passeportFfk: true });
+  assert.equal(p.passeportFfkCents, 2500);
+});
+
+test('Passeport FFK: ignored on a non-contact (cardio) offer', () => {
+  const p = computePrice({ offerId: 'cardio-1', paymentPlan: '1x', passeportFfk: true });
+  assert.equal(p.passeportFfkCents, 0);
+  assert.equal(p.totalCents, 18000);
+});
+
+test('Passeports combine: Shidokan + FFK on a karate offer', () => {
+  const p = computePrice({
+    offerId: 'karate-mix-boxing-adulte',
+    paymentPlan: '1x',
+    passeportShidokan: true,
+    passeportFfk: true,
+  });
+  assert.equal(p.totalCents, 33000 + 600 + 2500);
+});
+
 test('buildSheetRow: Passeport Shidokan column filled when paid', () => {
   const row = buildSheetRow({ offerId: 'karate-mix-boxing-enfant' }, { passeportCents: 600 });
   assert.equal(row.length, FORM_COLUMNS.length);

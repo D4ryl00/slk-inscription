@@ -87,6 +87,7 @@ export default async (req) => {
     offlineTotalCents: record.price.offlineTotalCents || 0,
     familyDiscountCents: record.price.familyDiscountCents || 0,
     passeportCents: record.price.passeportCents || 0,
+    passeportFfkCents: record.price.passeportFfkCents || 0,
   };
 
   try {

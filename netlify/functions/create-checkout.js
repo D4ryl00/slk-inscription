@@ -57,6 +57,7 @@ export default async (req) => {
           offlineTotalCents: price.offlineTotalCents,
           familyDiscountCents: price.familyDiscountCents,
           passeportCents: price.passeportCents,
+          passeportFfkCents: price.passeportFfkCents,
         }),
       );
     } catch (err) {
@@ -102,6 +103,7 @@ export default async (req) => {
         offlineTotalCents: price.offlineTotalCents,
         offlinePayments: price.offlinePayments,
         passeportCents: price.passeportCents,
+        passeportFfkCents: price.passeportFfkCents,
         planLabel,
       },
       checkoutIntentId: intent.id,

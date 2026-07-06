@@ -137,6 +137,10 @@ passeportCheckbox.addEventListener('change', () => {
   passeportTouched = true;
 });
 
+// --- Passeport FFK: competition licence, opt-in for competitors --------------
+const passeportFfkWrap = $('#passeportFfkWrap');
+const passeportFfkCheckbox = $('#passeportFfk');
+
 // --- Read the current form state --------------------------------------------
 function readForm() {
   const fd = new FormData(form);
@@ -170,6 +174,7 @@ function readForm() {
     paymentPlan: fd.get('paymentPlan') || '1x',
     aid: aidType.value ? { type: aidType.value, code: (fd.get('aidCode') || '').trim() } : { type: null },
     passeportShidokan: fd.get('passeportShidokan') === 'on',
+    passeportFfk: fd.get('passeportFfk') === 'on',
     offlinePayments: readOfflinePayments(fd),
     reglementInterieur: fd.get('reglementInterieur') === 'on',
     rgpdConsent: fd.get('rgpdConsent') === 'on',
@@ -213,6 +218,13 @@ function refresh() {
   else if (!passeportTouched) passeportCheckbox.checked = s.nouvelAdherent === 'Oui';
   s.passeportShidokan = isKarate && passeportCheckbox.checked;
 
+  // Passeport FFK: competition licence, offered to competitors on contact offers
+  // (karate/boxing/mma). Shown only when "Compétition" is selected; opt-in.
+  const isCompetitor = showMotivations && s.motivations.includes('Compétition');
+  passeportFfkWrap.classList.toggle('hidden', !isCompetitor);
+  if (!isCompetitor) passeportFfkCheckbox.checked = false;
+  s.passeportFfk = isCompetitor && passeportFfkCheckbox.checked;
+
   // Price
   const price = computePrice({
     offerId: s.offerId,
@@ -220,6 +232,7 @@ function refresh() {
     familyAlreadyRegistered: s.familyAlreadyRegistered,
     aid: s.aid,
     passeportShidokan: s.passeportShidokan,
+    passeportFfk: s.passeportFfk,
     offlinePayments: s.offlinePayments,
   });
   const totalEl = $('#priceTotal');
@@ -240,6 +253,7 @@ function refresh() {
     if (price.familyDiscountCents > 0) parts.push(`Réduction famille : −${formatEuros(price.familyDiscountCents)}`);
     if (price.aidApplied) parts.push(`Aide ${price.aidApplied.label} : −${formatEuros(price.aidApplied.amountCents)}`);
     if (price.passeportCents > 0) parts.push(`Passeport Shidokan : +${formatEuros(price.passeportCents)}`);
+    if (price.passeportFfkCents > 0) parts.push(`Passeport FFK : +${formatEuros(price.passeportFfkCents)}`);
     for (const o of price.offlinePayments) parts.push(`${o.label} (hors ligne) : −${formatEuros(o.amountCents)}`);
     parts.push(
       price.cbAmountCents > 0

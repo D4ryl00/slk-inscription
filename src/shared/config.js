@@ -118,6 +118,19 @@ export const PASSEPORT_SHIDOKAN = {
 };
 
 /**
+ * Passeport FFK — French federation licence booklet needed to compete. Optional
+ * add-on of `amount` € valid for `validityYears` years, offered to competitors
+ * on the contact offers (karate, Shido-Boxing, Shido-Mix-Martial). Buyable online.
+ * ⚠️ TO CONFIRM every season (price / validity).
+ */
+export const PASSEPORT_FFK = {
+  label: 'Passeport FFK',
+  amount: 25,
+  validityYears: 8,
+  column: 'Passeport FFK',
+};
+
+/**
  * OFFLINE payment methods (collected at the office). The amount entered for each
  * is DEDUCTED from what remains to be paid by card on HelloAsso. If the offline
  * total covers the whole fee, no online payment happens.
@@ -238,6 +251,7 @@ export const FORM_COLUMNS = [
   'Motivations',
   'Grade Shidokan',
   'Passeport Shidokan',
+  'Passeport FFK',
   'Cardio-Budo — Jours',
   'Mode de règlement',
   'Total cotisation',
