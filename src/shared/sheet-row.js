@@ -2,7 +2,7 @@
 // The site writes ONLY the columns coming from the form (contiguous block from
 // column A). Positional write (some headers are duplicated) → array.
 
-import { AIDS, FORM_COLUMNS, getOffer } from './config.js';
+import { AIDS, FORM_COLUMNS, PASSEPORT_SHIDOKAN, getOffer } from './config.js';
 import { formatEuros } from './pricing.js';
 
 const oui = (b) => (b ? 'Oui' : 'Non');
@@ -11,7 +11,8 @@ const oui = (b) => (b ? 'Oui' : 'Non');
  * @param {object} s submission sent by the front
  * @param {object} pay payment summary:
  *   { date, netTotalCents, onlineAmountCents, onlinePaymentId, onlinePlanLabel,
- *     offlinePayments:[{label,amountCents}], offlineTotalCents, familyDiscountCents }
+ *     offlinePayments:[{label,amountCents}], offlineTotalCents, familyDiscountCents,
+ *     passeportCents }
  * @returns {(string|number)[]} exactly FORM_COLUMNS.length values
  */
 export function buildSheetRow(s, pay) {
@@ -47,6 +48,12 @@ export function buildSheetRow(s, pay) {
       ' — à encaisser au bureau'
     : '';
 
+  // Passeport Shidokan (optional karate add-on).
+  const passeportCell =
+    p.passeportCents > 0
+      ? `Oui — ${formatEuros(p.passeportCents)} (valable ${PASSEPORT_SHIDOKAN.validityYears} ans)`
+      : '';
+
   const aidCell = (type) => {
     if (aid.type !== type) return '';
     const a = AIDS[type];
@@ -77,6 +84,7 @@ export function buildSheetRow(s, pay) {
     sectionLabel,                                          // Section
     Array.isArray(s.motivations) ? s.motivations.join(', ') : (s.motivations || ''), // Motivations
     s.gradeShidokan || '',                                 // Shidokan grade
+    passeportCell,                                         // Passeport Shidokan
     Array.isArray(s.cardioJours) ? s.cardioJours.join(', ') : (s.cardioJours || ''), // Cardio days
     modeReglement,                                         // Payment method
     totalCell,                                             // Total fee

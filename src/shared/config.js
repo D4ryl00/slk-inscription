@@ -104,6 +104,20 @@ export const AIDS = {
 };
 
 /**
+ * Passeport Shidokan — booklet required to practice karate. Flat add-on of
+ * `amount` € valid for `validityYears` years. Offered (checked by default for new
+ * members) on any karate offer; it is NOT mandatory — a member who still has a
+ * valid one can uncheck it, and an existing member can add it if theirs expired.
+ * ⚠️ TO CONFIRM every season (price / validity).
+ */
+export const PASSEPORT_SHIDOKAN = {
+  label: 'Passeport Shidokan',
+  amount: 6,
+  validityYears: 6,
+  column: 'Passeport Shidokan',
+};
+
+/**
  * OFFLINE payment methods (collected at the office). The amount entered for each
  * is DEDUCTED from what remains to be paid by card on HelloAsso. If the offline
  * total covers the whole fee, no online payment happens.
@@ -223,6 +237,7 @@ export const FORM_COLUMNS = [
   'Section',
   'Motivations',
   'Grade Shidokan',
+  'Passeport Shidokan',
   'Cardio-Budo — Jours',
   'Mode de règlement',
   'Total cotisation',

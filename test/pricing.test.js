@@ -98,6 +98,38 @@ test('offline greater than total → error', () => {
   assert.equal(p.ok, false);
 });
 
+test('Passeport Shidokan: karate offer + checked → +6 €', () => {
+  const p = computePrice({
+    offerId: 'karate-mix-boxing-enfant',
+    paymentPlan: '1x',
+    passeportShidokan: true,
+  });
+  assert.equal(p.passeportCents, 600);
+  assert.equal(p.totalCents, 26500 + 600);
+});
+
+test('Passeport Shidokan: unchecked → not added', () => {
+  const p = computePrice({
+    offerId: 'karate-mix-boxing-enfant',
+    paymentPlan: '1x',
+    passeportShidokan: false,
+  });
+  assert.equal(p.passeportCents, 0);
+  assert.equal(p.totalCents, 26500);
+});
+
+test('Passeport Shidokan: ignored on a non-karate offer', () => {
+  const p = computePrice({ offerId: 'cardio-1', paymentPlan: '1x', passeportShidokan: true });
+  assert.equal(p.passeportCents, 0);
+  assert.equal(p.totalCents, 18000);
+});
+
+test('buildSheetRow: Passeport Shidokan column filled when paid', () => {
+  const row = buildSheetRow({ offerId: 'karate-mix-boxing-enfant' }, { passeportCents: 600 });
+  assert.equal(row.length, FORM_COLUMNS.length);
+  assert.match(row[FORM_COLUMNS.indexOf('Passeport Shidokan')], /valable 6 ans/);
+});
+
 test('3x installments: exact sum = total', () => {
   const { terms, initialAmount } = buildInstallments(26500, '3x');
   assert.equal(terms.length, 3);
