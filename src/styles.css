@@ -89,6 +89,18 @@ button[type="submit"]:disabled { opacity: 0.6; cursor: default; }
 .error { color: var(--error); font-weight: 600; min-height: 1.2em; }
 .hidden { display: none; }
 
+/* Highlighted note (e.g. HelloAsso contribution heads-up) */
+.notice {
+  background: #fff7e6;
+  border: 1px solid #f2d894;
+  border-left: 4px solid #e0a13a;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin: 0 0 14px;
+  font-size: 0.92rem;
+  color: var(--ink);
+}
+
 /* Red asterisk for required fields */
 .req { color: var(--error); font-weight: 700; }
 

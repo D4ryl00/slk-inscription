@@ -239,6 +239,7 @@ function refresh() {
   const cbEl = $('#priceCb');
   const detail = $('#priceDetail');
   const submitBtn = $('#submitBtn');
+  const helloAssoNote = $('#helloAssoNote');
 
   if (!price.ok) {
     totalEl.textContent = '—';
@@ -266,6 +267,10 @@ function refresh() {
         ? `Payer ${formatEuros(price.cbAmountCents)} en ligne et m'inscrire`
         : 'Valider mon inscription (règlement au bureau)';
   }
+
+  // HelloAsso adds an optional contribution on its own payment page — flag it
+  // only when there is actually an online card payment.
+  helloAssoNote.classList.toggle('hidden', !(price.ok && price.cbAmountCents > 0));
 
   // Documents to bring
   const list = $('#docsList');
