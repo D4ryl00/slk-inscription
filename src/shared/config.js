@@ -55,7 +55,7 @@ export const OFFERS = [
   },
   {
     id: 'cardio-1',
-    label: 'Cardio Budo Kick-Boxing — 1 cours',
+    label: 'Cardio Budo Kick-Boxing — 1 cours / semaine',
     category: 'na',
     disciplines: ['cardio'],
     priceAnnual: 180,
@@ -63,7 +63,7 @@ export const OFFERS = [
   },
   {
     id: 'cardio-2',
-    label: 'Cardio Budo Kick-Boxing — 2 cours',
+    label: 'Cardio Budo Kick-Boxing — 2 cours / semaine',
     category: 'na',
     disciplines: ['cardio'],
     priceAnnual: 265,
@@ -71,7 +71,7 @@ export const OFFERS = [
   },
   {
     id: 'cardio-3',
-    label: 'Cardio Budo Kick-Boxing — 3 cours',
+    label: 'Cardio Budo Kick-Boxing — 3 cours / semaine',
     category: 'na',
     disciplines: ['cardio'],
     priceAnnual: 320,

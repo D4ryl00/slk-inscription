@@ -216,7 +216,7 @@ function refresh() {
     dayBoxes.forEach((b) => { b.disabled = !b.checked && atCap; });
     const legend = cardioWrap.querySelector('legend');
     if (legend) {
-      legend.textContent = `Cardio-Budo — sélectionnez ${cardioSessions} jour${cardioSessions > 1 ? 's' : ''}`;
+      legend.textContent = `Cardio-Budo — sélectionnez ${cardioSessions} jour${cardioSessions > 1 ? 's' : ''} par semaine`;
     }
   }
 
