@@ -144,7 +144,7 @@ test('licence fees are informational: they do not change the total', () => {
 test('late-season discount: none before Nov 1st', () => {
   const p = computePrice(
     { offerId: 'cardio-1', paymentPlan: '1x' },
-    new Date('2026-10-31T12:00:00'),
+    new Date('2026-10-31T12:00:00Z'),
   );
   assert.equal(p.lateDiscountCents, 0);
   assert.equal(p.totalCents, 18000);
@@ -153,17 +153,26 @@ test('late-season discount: none before Nov 1st', () => {
 test('late-season discount: −20 € in November', () => {
   const p = computePrice(
     { offerId: 'cardio-1', paymentPlan: '1x' },
-    new Date('2026-11-15T12:00:00'),
+    new Date('2026-11-15T12:00:00Z'),
   );
   assert.equal(p.lateDiscountCents, 2000);
   assert.equal(p.totalCents, 18000 - 2000);
 });
 
 test('late-season discount: −40 € in December, −60 € in January', () => {
-  const dec = computePrice({ offerId: 'cardio-1', paymentPlan: '1x' }, new Date('2026-12-05T12:00:00'));
+  const dec = computePrice({ offerId: 'cardio-1', paymentPlan: '1x' }, new Date('2026-12-05T12:00:00Z'));
   assert.equal(dec.lateDiscountCents, 4000);
-  const jan = computePrice({ offerId: 'cardio-1', paymentPlan: '1x' }, new Date('2027-01-10T12:00:00'));
+  const jan = computePrice({ offerId: 'cardio-1', paymentPlan: '1x' }, new Date('2027-01-10T12:00:00Z'));
   assert.equal(jan.lateDiscountCents, 6000);
+});
+
+test('late-season discount: the palier flips at Paris midnight, not UTC', () => {
+  // 2026-10-31 22:30 UTC = still 23:30 in Paris (CET, UTC+1) → before Nov 1st → 0.
+  const before = computePrice({ offerId: 'cardio-1', paymentPlan: '1x' }, new Date('2026-10-31T22:30:00Z'));
+  assert.equal(before.lateDiscountCents, 0);
+  // 2026-10-31 23:30 UTC = 00:30 on Nov 1st in Paris → first −20 € step.
+  const after = computePrice({ offerId: 'cardio-1', paymentPlan: '1x' }, new Date('2026-10-31T23:30:00Z'));
+  assert.equal(after.lateDiscountCents, 2000);
 });
 
 test('late-season discount + new-member fee stack correctly', () => {

@@ -143,6 +143,8 @@ export function licenseFeesForOffer(offer) {
  * by an extra `stepAmount` € at the start of every following month
  * (Nov → −20 €, Dec → −40 €, Jan → −60 €, …). Applies to every offer.
  * `maxAmount` caps the deduction in € (0 = no cap).
+ * `startDate` and every month boundary are read in the Europe/Paris civil
+ * calendar (so a palier flips at Paris midnight, not the server's UTC midnight).
  * ⚠️ TO CONFIRM every season (startDate must point to the current season).
  */
 export const LATE_SEASON_DISCOUNT = {
@@ -150,16 +152,38 @@ export const LATE_SEASON_DISCOUNT = {
   startDate: '2026-11-01',
   stepAmount: 20,
   maxAmount: 0, // 0 = no cap
+  timeZone: 'Europe/Paris',
 };
+
+/** Civil { year, month (0-based), day } of `date` as seen in `timeZone`. */
+function civilPartsIn(date, timeZone) {
+  // en-CA formats as YYYY-MM-DD, easy to split back into numbers.
+  const [y, m, d] = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+    .format(date)
+    .split('-')
+    .map(Number);
+  return { year: y, month: m - 1, day: d };
+}
 
 /** Number of −stepAmount steps in effect at `refDate` (Nov = 1, Dec = 2, …); 0 before the start. */
 export function lateSeasonDiscountSteps(refDate = new Date()) {
   if (!LATE_SEASON_DISCOUNT.enabled) return 0;
-  const start = new Date(`${LATE_SEASON_DISCOUNT.startDate}T00:00:00`);
-  if (Number.isNaN(start.getTime()) || refDate < start) return 0;
-  const months =
-    (refDate.getFullYear() - start.getFullYear()) * 12 +
-    (refDate.getMonth() - start.getMonth());
+  const [sy, sm, sd] = LATE_SEASON_DISCOUNT.startDate.split('-').map(Number);
+  if (!sy || !sm || !sd) return 0; // malformed startDate
+  const start = { year: sy, month: sm - 1, day: sd };
+  const now = civilPartsIn(refDate, LATE_SEASON_DISCOUNT.timeZone);
+  // Before the start civil date (in the club's timezone) → no discount.
+  const beforeStart =
+    now.year < start.year ||
+    (now.year === start.year &&
+      (now.month < start.month || (now.month === start.month && now.day < start.day)));
+  if (beforeStart) return 0;
+  const months = (now.year - start.year) * 12 + (now.month - start.month);
   return months + 1; // the start month itself already grants one step
 }
 
