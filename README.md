@@ -46,7 +46,7 @@ src/
     config.js      tarifs, disciplines, aides, EN-TÊTES du Sheet   ⚠️ à confirmer
     pricing.js     calcul du prix + échéances (source de vérité)
     docs.js        pièces à rapporter selon la catégorie
-    sheet-row.js   mapping soumission+paiement → 39 colonnes
+    sheet-row.js   mapping soumission+paiement → 28 colonnes
 netlify/functions/
   create-checkout.js · helloasso-webhook.js
   lib/helloasso.js   OAuth + checkout-intent + vérification paiement
@@ -163,6 +163,52 @@ Mettre la même URL publique dans `SITE_URL`. Parcours de test :
    `SITE_URL` = l'URL réelle du site, Google Sheet **de production** partagé au compte de service.
 4. Déclarer le **webhook prod** : `https://<site-prod>/api/helloasso-webhook`.
 5. Après une **inscription réelle validée de bout en bout**, désactiver le Jotform.
+
+## À faire à chaque début de saison
+
+Presque toute la config saisonnière est dans **`src/shared/config.js`**. À l'ouverture
+d'une nouvelle saison (ex. **2027-2028**), reprendre cette liste dans l'ordre, puis
+`npm test` et redéployer.
+
+1. **Titre de la saison** — remplacer l'année dans `src/index.html` (le `<title>` **et** le
+   `<h1>`, ex. « Adhésion Stade Laurentin Karaté 2027-2028 »).
+
+2. **Remise « inscription tardive »** (`LATE_SEASON_DISCOUNT`) — c'est l'opération liée au
+   changement de titre ci-dessus. Mettre à jour :
+   - `startDate` → **1er novembre** de la nouvelle saison (`'2027-11-01'`) ;
+   - `endDate` → **fin des inscriptions**, en général **30 juin** suivant (`'2028-06-30'`).
+   Entre `endDate` et le `startDate` suivant, la remise est **nulle** : les inscriptions de la
+   nouvelle saison (juillet → octobre) paient donc plein tarif automatiquement, même si cette
+   édition n'est pas faite dès le 1er juillet (il suffit qu'elle soit faite avant le 1er novembre).
+   Vérifier aussi `stepAmount` (−20 €/mois) et `maxAmount` (`0` = pas de plafond).
+
+3. **Tarifs / formules** (`OFFERS`) — prix annuels, liste des formules, `sessions` Cardio et
+   tarifs des cours au Ticket (affichés dans `src/index.html`).
+
+4. **Frais nouvel adhérent** (`NEW_MEMBER_FEE.amount`) — forfait ajouté d'office à toute
+   première inscription (pas de colonne dédiée : déduit de la colonne « Nouvel adhérent »).
+
+5. **Licences incluses** (`LICENSE_FEES`) — montants FFK (39 €) et Shidokan (20 €) affichés
+   dans le détail du règlement. Shidokan est exclu du Cardio-Budo (`licenseFeesForOffer`).
+
+6. **Aides** (`AIDS`) — Pass'Sport / PEPS (les barèmes changent chaque saison).
+
+7. **Réduction famille** (`FAMILY_DISCOUNT`) — barème −50/−70/−100 €.
+
+8. **Grades Shidokan** (`GRADES_SHIDOKAN`) — si la liste évolue.
+
+9. **Liens vers les documents FFKarate** (`src/shared/docs.js`, `DOC_LINKS`) — la **note
+   certificat médical** et les **annexes mineur** sont publiées chaque saison (l'URL contient
+   l'année, ex. « …-2025-2026… »). Mettre aussi à jour les libellés « Note FFKarate 2025-2026 »
+   dans `docs.js` **et** dans `src/merci.html` (liens en dur), ainsi que le lien du formulaire PEPS.
+   Vérifier les liens **règlement intérieur / RGPD** (Google Drive) dans `src/index.html`.
+
+10. **Google Sheet** — le plus simple est un **nouveau Sheet (ou un nouvel onglet) par saison**.
+    Créer/dupliquer le registre, remettre les en-têtes `FORM_COLUMNS` en 1re ligne (le site les
+    écrit tout seul si la feuille est vide), le **partager en Éditeur** au compte de service, puis
+    mettre à jour `GOOGLE_SHEET_ID` / `GOOGLE_SHEET_TAB` dans les variables d'env Netlify.
+
+11. **Vérifier & déployer** — `npm test` (doit être vert), puis pousser / redéployer sur Netlify.
 
 ## Points à confirmer avec le club (cherchez « À CONFIRMER » dans le code)
 

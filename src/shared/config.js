@@ -143,13 +143,22 @@ export function licenseFeesForOffer(offer) {
  * by an extra `stepAmount` € at the start of every following month
  * (Nov → −20 €, Dec → −40 €, Jan → −60 €, …). Applies to every offer.
  * `maxAmount` caps the deduction in € (0 = no cap).
- * `startDate` and every month boundary are read in the Europe/Paris civil
- * calendar (so a palier flips at Paris midnight, not the server's UTC midnight).
- * ⚠️ TO CONFIRM every season (startDate must point to the current season).
+ *
+ * Season lifecycle: the discount only runs between `startDate` and `endDate`
+ * (inclusive). After `endDate` (registrations usually close end of June) it is
+ * back to 0, so the NEXT season's early registrations (July → October) pay full
+ * price. When a new season opens (the manual title change, e.g. "2027-2028"),
+ * bump `startDate`/`endDate` to that season — the July→October gap is already
+ * handled by `endDate`, so the exact timing of that manual edit is not critical.
+ *
+ * Dates and every month boundary are read in the Europe/Paris civil calendar
+ * (so a palier flips at Paris midnight, not the server's UTC midnight).
+ * ⚠️ TO CONFIRM every season (startDate/endDate must point to the current season).
  */
 export const LATE_SEASON_DISCOUNT = {
   enabled: true,
-  startDate: '2026-11-01',
+  startDate: '2026-11-01', // first −20 € (season start)
+  endDate: '2027-06-30', // last day the discount applies (season end); after it → 0
   stepAmount: 20,
   maxAmount: 0, // 0 = no cap
   timeZone: 'Europe/Paris',
@@ -170,19 +179,30 @@ function civilPartsIn(date, timeZone) {
   return { year: y, month: m - 1, day: d };
 }
 
-/** Number of −stepAmount steps in effect at `refDate` (Nov = 1, Dec = 2, …); 0 before the start. */
+/** Parse 'YYYY-MM-DD' into civil { year, month (0-based), day }, or null if malformed. */
+function parseCivilDate(iso) {
+  const [y, m, d] = String(iso).split('-').map(Number);
+  if (!y || !m || !d) return null;
+  return { year: y, month: m - 1, day: d };
+}
+
+/** Sign of (a − b) for civil {year,month,day} triples: -1, 0 or 1. */
+function compareCivil(a, b) {
+  if (a.year !== b.year) return a.year < b.year ? -1 : 1;
+  if (a.month !== b.month) return a.month < b.month ? -1 : 1;
+  if (a.day !== b.day) return a.day < b.day ? -1 : 1;
+  return 0;
+}
+
+/** Number of −stepAmount steps in effect at `refDate` (Nov = 1, Dec = 2, …); 0 outside the season. */
 export function lateSeasonDiscountSteps(refDate = new Date()) {
   if (!LATE_SEASON_DISCOUNT.enabled) return 0;
-  const [sy, sm, sd] = LATE_SEASON_DISCOUNT.startDate.split('-').map(Number);
-  if (!sy || !sm || !sd) return 0; // malformed startDate
-  const start = { year: sy, month: sm - 1, day: sd };
+  const start = parseCivilDate(LATE_SEASON_DISCOUNT.startDate);
+  if (!start) return 0; // malformed startDate
   const now = civilPartsIn(refDate, LATE_SEASON_DISCOUNT.timeZone);
-  // Before the start civil date (in the club's timezone) → no discount.
-  const beforeStart =
-    now.year < start.year ||
-    (now.year === start.year &&
-      (now.month < start.month || (now.month === start.month && now.day < start.day)));
-  if (beforeStart) return 0;
+  if (compareCivil(now, start) < 0) return 0; // before the season's discount start
+  const end = parseCivilDate(LATE_SEASON_DISCOUNT.endDate);
+  if (end && compareCivil(now, end) > 0) return 0; // season over → no discount until the next one
   const months = (now.year - start.year) * 12 + (now.month - start.month);
   return months + 1; // the start month itself already grants one step
 }

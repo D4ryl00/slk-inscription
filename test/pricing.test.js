@@ -166,6 +166,20 @@ test('late-season discount: −40 € in December, −60 € in January', () => 
   assert.equal(jan.lateDiscountCents, 6000);
 });
 
+test('late-season discount: maxes out in June then stops after the season ends', () => {
+  // June 2027 = 8th step (Nov→Jun) → −160 €, capped by the offer floor at 0.
+  const june = computePrice({ offerId: 'cardio-1', paymentPlan: '1x' }, new Date('2027-06-15T12:00:00Z'));
+  assert.equal(june.lateDiscountCents, 16000);
+  assert.equal(june.totalCents, 18000 - 16000);
+  // July 2027 = next season's early registrations (still the old config) → no discount.
+  const july = computePrice({ offerId: 'cardio-1', paymentPlan: '1x' }, new Date('2027-07-01T12:00:00Z'));
+  assert.equal(july.lateDiscountCents, 0);
+  assert.equal(july.totalCents, 18000);
+  // September 2027 (new season, before its November) → still no discount.
+  const sept = computePrice({ offerId: 'cardio-1', paymentPlan: '1x' }, new Date('2027-09-10T12:00:00Z'));
+  assert.equal(sept.lateDiscountCents, 0);
+});
+
 test('late-season discount: the palier flips at Paris midnight, not UTC', () => {
   // 2026-10-31 22:30 UTC = still 23:30 in Paris (CET, UTC+1) → before Nov 1st → 0.
   const before = computePrice({ offerId: 'cardio-1', paymentPlan: '1x' }, new Date('2026-10-31T22:30:00Z'));
