@@ -4,13 +4,13 @@
 
 import {
   AIDS,
-  PASSEPORT_FFK,
-  PASSEPORT_SHIDOKAN,
+  NEW_MEMBER_FEE,
   PAYMENT_METHODS,
   PAYMENT_PLANS,
   familyIncrementalDiscount,
   getOffer,
-  offerIsContact,
+  lateSeasonDiscount,
+  licenseFeesForOffer,
 } from './config.js';
 
 const toCents = (euros) => Math.round(euros * 100);
@@ -25,21 +25,23 @@ export const formatEuros = (c) =>
  * @param {string} selection.offerId
  * @param {'1x'|'3x'} selection.paymentPlan
  * @param {number} [selection.familyAlreadyRegistered=0] household members already registered
+ * @param {string} [selection.nouvelAdherent] 'Oui' → the flat new-member fee applies
  * @param {{type?: 'passsport'|'peps'|null, code?: string}} [selection.aid]
- * @param {boolean} [selection.passeportShidokan] add the Passeport Shidokan (karate only)
- * @param {boolean} [selection.passeportFfk] add the Passeport FFK (competitors, contact offers)
  * @param {{method: string, amount: number}[]} [selection.offlinePayments] amounts (€) paid offline
+ * @param {Date} [refDate=new Date()] reference date for the late-season proration
  * @returns {{
  *   ok: boolean, error?: string,
  *   offer?: object, plan?: object,
- *   baseCents?: number, familyDiscountCents?: number, aidCents?: number,
+ *   baseCents?: number, familyDiscountCents?: number, lateDiscountCents?: number,
+ *   aidCents?: number, newMemberFeeCents?: number,
+ *   licenseFees?: {label: string, amountCents: number}[],
  *   totalCents?: number, currency?: 'EUR',
  *   aidApplied?: {type: string, label: string, code: string, amountCents: number}|null,
  *   offlinePayments?: {method: string, label: string, amountCents: number}[],
  *   offlineTotalCents?: number, cbAmountCents?: number
  * }}
  */
-export function computePrice(selection) {
+export function computePrice(selection, refDate = new Date()) {
   const offer = getOffer(selection?.offerId);
   if (!offer) return { ok: false, error: 'Offre inconnue.' };
 
@@ -52,6 +54,15 @@ export function computePrice(selection) {
   const familyDiscountCents = toCents(
     familyIncrementalDiscount(selection.familyAlreadyRegistered || 0),
   );
+
+  // --- Late-season proration (−20 € from Nov 1st, +20 € each month start) -----
+  const lateDiscountCents = toCents(lateSeasonDiscount(refDate));
+
+  // --- Licence fees already included in the price (informational breakdown) ----
+  const licenseFees = licenseFeesForOffer(offer).map((l) => ({
+    label: l.label,
+    amountCents: toCents(l.amount),
+  }));
 
   // --- Aid (PEPS / Pass'Sport), deducted only if a code is entered ------------
   let aidCents = 0;
@@ -67,18 +78,14 @@ export function computePrice(selection) {
     aidApplied = { type: aidType, label: aid.label, code, amountCents: aidCents };
   }
 
-  // --- Passeport Shidokan (optional add-on, karate offers only) ---------------
-  const offerHasKarate = offer.disciplines.includes('karate');
-  const passeportCents =
-    selection?.passeportShidokan && offerHasKarate ? toCents(PASSEPORT_SHIDOKAN.amount) : 0;
+  // --- New-member fee (automatic flat fee for first-time registrations) -------
+  const newMemberFeeCents =
+    selection?.nouvelAdherent === 'Oui' ? toCents(NEW_MEMBER_FEE.amount) : 0;
 
-  // --- Passeport FFK (optional, competitors on contact offers) ----------------
-  const passeportFfkCents =
-    selection?.passeportFfk && offerIsContact(offer) ? toCents(PASSEPORT_FFK.amount) : 0;
-
-  // Total due — net fee (never below 0) plus the optional passeport add-ons.
+  // Total due — net fee (discounts floored at 0) plus the flat new-member fee.
   const totalCents =
-    Math.max(0, baseCents - familyDiscountCents - aidCents) + passeportCents + passeportFfkCents;
+    Math.max(0, baseCents - familyDiscountCents - lateDiscountCents - aidCents) +
+    newMemberFeeCents;
 
   // --- Offline payments (cheque, holiday vouchers, cash) ----------------------
   // Each amount is deducted from what remains to be paid by card on HelloAsso.
@@ -105,10 +112,11 @@ export function computePrice(selection) {
     plan,
     baseCents,
     familyDiscountCents,
+    lateDiscountCents,
     aidCents,
     aidApplied,
-    passeportCents,
-    passeportFfkCents,
+    newMemberFeeCents,
+    licenseFees,
     totalCents,
     currency: 'EUR',
     offlinePayments,

@@ -98,67 +98,93 @@ test('offline greater than total → error', () => {
   assert.equal(p.ok, false);
 });
 
-test('Passeport Shidokan: karate offer + checked → +6 €', () => {
+test('new-member fee: +6 € when nouvelAdherent = Oui', () => {
   const p = computePrice({
     offerId: 'karate-mix-boxing-enfant',
     paymentPlan: '1x',
-    passeportShidokan: true,
+    nouvelAdherent: 'Oui',
   });
-  assert.equal(p.passeportCents, 600);
+  assert.equal(p.newMemberFeeCents, 600);
   assert.equal(p.totalCents, 26500 + 600);
 });
 
-test('Passeport Shidokan: unchecked → not added', () => {
+test('new-member fee: not added for a renewal (Non)', () => {
   const p = computePrice({
     offerId: 'karate-mix-boxing-enfant',
     paymentPlan: '1x',
-    passeportShidokan: false,
+    nouvelAdherent: 'Non',
   });
-  assert.equal(p.passeportCents, 0);
+  assert.equal(p.newMemberFeeCents, 0);
   assert.equal(p.totalCents, 26500);
 });
 
-test('Passeport Shidokan: ignored on a non-karate offer', () => {
-  const p = computePrice({ offerId: 'cardio-1', paymentPlan: '1x', passeportShidokan: true });
-  assert.equal(p.passeportCents, 0);
+test('new-member fee: applies to any discipline (cardio)', () => {
+  const p = computePrice({ offerId: 'cardio-1', paymentPlan: '1x', nouvelAdherent: 'Oui' });
+  assert.equal(p.newMemberFeeCents, 600);
+  assert.equal(p.totalCents, 18000 + 600);
+});
+
+test('licence breakdown: FFK 39 € + Shidokan 20 € on a karate offer', () => {
+  const p = computePrice({ offerId: 'karate-mix-boxing-adulte', paymentPlan: '1x' });
+  const labels = p.licenseFees.map((l) => `${l.label}:${l.amountCents}`);
+  assert.deepEqual(labels, ['licence FFK:3900', 'licence Shidokan:2000']);
+});
+
+test('licence breakdown: Cardio-Budo has FFK only (no Shidokan)', () => {
+  const p = computePrice({ offerId: 'cardio-1', paymentPlan: '1x' });
+  const labels = p.licenseFees.map((l) => l.label);
+  assert.deepEqual(labels, ['licence FFK']);
+});
+
+test('licence fees are informational: they do not change the total', () => {
+  const p = computePrice({ offerId: 'karate-mix-boxing-adulte', paymentPlan: '1x' });
+  assert.equal(p.totalCents, 33000); // still the base price, licences included in it
+});
+
+test('late-season discount: none before Nov 1st', () => {
+  const p = computePrice(
+    { offerId: 'cardio-1', paymentPlan: '1x' },
+    new Date('2026-10-31T12:00:00'),
+  );
+  assert.equal(p.lateDiscountCents, 0);
   assert.equal(p.totalCents, 18000);
 });
 
-test('Passeport FFK: karate offer + checked → +25 €', () => {
-  const p = computePrice({
-    offerId: 'karate-mix-boxing-adulte',
-    paymentPlan: '1x',
-    passeportFfk: true,
-  });
-  assert.equal(p.passeportFfkCents, 2500);
-  assert.equal(p.totalCents, 33000 + 2500);
+test('late-season discount: −20 € in November', () => {
+  const p = computePrice(
+    { offerId: 'cardio-1', paymentPlan: '1x' },
+    new Date('2026-11-15T12:00:00'),
+  );
+  assert.equal(p.lateDiscountCents, 2000);
+  assert.equal(p.totalCents, 18000 - 2000);
 });
 
-test('Passeport FFK: boxing/mma offer + checked → +25 €', () => {
-  const p = computePrice({ offerId: 'mix-boxing-adulte', paymentPlan: '1x', passeportFfk: true });
-  assert.equal(p.passeportFfkCents, 2500);
+test('late-season discount: −40 € in December, −60 € in January', () => {
+  const dec = computePrice({ offerId: 'cardio-1', paymentPlan: '1x' }, new Date('2026-12-05T12:00:00'));
+  assert.equal(dec.lateDiscountCents, 4000);
+  const jan = computePrice({ offerId: 'cardio-1', paymentPlan: '1x' }, new Date('2027-01-10T12:00:00'));
+  assert.equal(jan.lateDiscountCents, 6000);
 });
 
-test('Passeport FFK: ignored on a non-contact (cardio) offer', () => {
-  const p = computePrice({ offerId: 'cardio-1', paymentPlan: '1x', passeportFfk: true });
-  assert.equal(p.passeportFfkCents, 0);
-  assert.equal(p.totalCents, 18000);
+test('late-season discount + new-member fee stack correctly', () => {
+  const p = computePrice(
+    { offerId: 'cardio-1', paymentPlan: '1x', nouvelAdherent: 'Oui' },
+    new Date('2026-11-15T12:00:00'),
+  );
+  // 180 − 20 (late) + 6 (new member) = 166
+  assert.equal(p.totalCents, 18000 - 2000 + 600);
 });
 
-test('Passeports combine: Shidokan + FFK on a karate offer', () => {
-  const p = computePrice({
-    offerId: 'karate-mix-boxing-adulte',
-    paymentPlan: '1x',
-    passeportShidokan: true,
-    passeportFfk: true,
-  });
-  assert.equal(p.totalCents, 33000 + 600 + 2500);
-});
-
-test('buildSheetRow: Passeport Shidokan column filled when paid', () => {
-  const row = buildSheetRow({ offerId: 'karate-mix-boxing-enfant' }, { passeportCents: 600 });
+test('buildSheetRow: no passeport columns anymore, "Nouvel adhérent" flags the fee', () => {
+  const row = buildSheetRow(
+    { offerId: 'karate-mix-boxing-enfant', nouvelAdherent: 'Oui' },
+    { netTotalCents: 27100 },
+  );
   assert.equal(row.length, FORM_COLUMNS.length);
-  assert.match(row[FORM_COLUMNS.indexOf('Passeport Shidokan')], /valable 6 ans/);
+  assert.equal(FORM_COLUMNS.includes('Frais nouvel adhérent'), false);
+  assert.equal(FORM_COLUMNS.includes('Passeport FFK'), false);
+  assert.equal(FORM_COLUMNS.includes('Passeport Shidokan'), false);
+  assert.equal(row[FORM_COLUMNS.indexOf('Nouvel adhérent')], 'Oui');
 });
 
 test('3x installments: exact sum = total', () => {

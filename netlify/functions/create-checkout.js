@@ -35,6 +35,7 @@ export default async (req) => {
     offerId: s.offerId,
     paymentPlan: s.paymentPlan,
     familyAlreadyRegistered: s.familyAlreadyRegistered,
+    nouvelAdherent: s.nouvelAdherent,
     aid: s.aid,
     offlinePayments: s.offlinePayments,
   });
@@ -56,8 +57,7 @@ export default async (req) => {
           offlinePayments: price.offlinePayments,
           offlineTotalCents: price.offlineTotalCents,
           familyDiscountCents: price.familyDiscountCents,
-          passeportCents: price.passeportCents,
-          passeportFfkCents: price.passeportFfkCents,
+          lateDiscountCents: price.lateDiscountCents,
         }),
       );
     } catch (err) {
@@ -102,8 +102,7 @@ export default async (req) => {
         cbAmountCents: price.cbAmountCents,
         offlineTotalCents: price.offlineTotalCents,
         offlinePayments: price.offlinePayments,
-        passeportCents: price.passeportCents,
-        passeportFfkCents: price.passeportFfkCents,
+        lateDiscountCents: price.lateDiscountCents,
         planLabel,
       },
       checkoutIntentId: intent.id,

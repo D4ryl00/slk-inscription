@@ -129,18 +129,6 @@ aidType.addEventListener('change', () => {
   refresh();
 });
 
-// --- Passeport Shidokan: track manual toggle to respect the user's choice ----
-const passeportWrap = $('#passeportWrap');
-const passeportCheckbox = $('#passeportShidokan');
-let passeportTouched = false;
-passeportCheckbox.addEventListener('change', () => {
-  passeportTouched = true;
-});
-
-// --- Passeport FFK: competition licence, opt-in for competitors --------------
-const passeportFfkWrap = $('#passeportFfkWrap');
-const passeportFfkCheckbox = $('#passeportFfk');
-
 // --- Read the current form state --------------------------------------------
 function readForm() {
   const fd = new FormData(form);
@@ -173,8 +161,6 @@ function readForm() {
     familyAlreadyRegistered: parseInt(fd.get('familyAlreadyRegistered') || '0', 10) || 0,
     paymentPlan: fd.get('paymentPlan') || '1x',
     aid: aidType.value ? { type: aidType.value, code: (fd.get('aidCode') || '').trim() } : { type: null },
-    passeportShidokan: fd.get('passeportShidokan') === 'on',
-    passeportFfk: fd.get('passeportFfk') === 'on',
     offlinePayments: readOfflinePayments(fd),
     reglementInterieur: fd.get('reglementInterieur') === 'on',
     rgpdConsent: fd.get('rgpdConsent') === 'on',
@@ -236,29 +222,13 @@ function refresh() {
     if (hide) input.checked = false; // do not submit a hidden motivation
   });
 
-  // Passeport Shidokan: karate-only add-on. Default-checked for new members;
-  // existing members can add it (e.g. if theirs expired) but it starts unchecked.
-  // Once the user toggles it manually, we stop overriding their choice.
-  passeportWrap.classList.toggle('hidden', !isKarate);
-  if (!isKarate) passeportCheckbox.checked = false;
-  else if (!passeportTouched) passeportCheckbox.checked = s.nouvelAdherent === 'Oui';
-  s.passeportShidokan = isKarate && passeportCheckbox.checked;
-
-  // Passeport FFK: competition licence, offered to competitors on contact offers
-  // (karate/boxing/mma). Shown only when "Compétition" is selected; opt-in.
-  const isCompetitor = showMotivations && s.motivations.includes('Compétition');
-  passeportFfkWrap.classList.toggle('hidden', !isCompetitor);
-  if (!isCompetitor) passeportFfkCheckbox.checked = false;
-  s.passeportFfk = isCompetitor && passeportFfkCheckbox.checked;
-
   // Price
   const price = computePrice({
     offerId: s.offerId,
     paymentPlan: s.paymentPlan,
     familyAlreadyRegistered: s.familyAlreadyRegistered,
+    nouvelAdherent: s.nouvelAdherent,
     aid: s.aid,
-    passeportShidokan: s.passeportShidokan,
-    passeportFfk: s.passeportFfk,
     offlinePayments: s.offlinePayments,
   });
   const totalEl = $('#priceTotal');
@@ -277,10 +247,16 @@ function refresh() {
     totalEl.textContent = formatEuros(price.totalCents);
     cbEl.textContent = formatEuros(price.cbAmountCents);
     const parts = [`Cotisation : ${formatEuros(price.baseCents)}`];
+    if (price.licenseFees?.length) {
+      const lic = price.licenseFees
+        .map((l) => `${formatEuros(l.amountCents)} de ${l.label}`)
+        .join(' et ');
+      parts.push(`Dont ${lic} (compris dans la cotisation)`);
+    }
     if (price.familyDiscountCents > 0) parts.push(`Réduction famille : −${formatEuros(price.familyDiscountCents)}`);
+    if (price.lateDiscountCents > 0) parts.push(`Remise saison entamée : −${formatEuros(price.lateDiscountCents)}`);
     if (price.aidApplied) parts.push(`Aide ${price.aidApplied.label} : −${formatEuros(price.aidApplied.amountCents)}`);
-    if (price.passeportCents > 0) parts.push(`Passeport Shidokan : +${formatEuros(price.passeportCents)}`);
-    if (price.passeportFfkCents > 0) parts.push(`Passeport FFK : +${formatEuros(price.passeportFfkCents)}`);
+    if (price.newMemberFeeCents > 0) parts.push(`Frais nouvel adhérent : +${formatEuros(price.newMemberFeeCents)}`);
     for (const o of price.offlinePayments) parts.push(`${o.label} (hors ligne) : −${formatEuros(o.amountCents)}`);
     parts.push(
       price.cbAmountCents > 0

@@ -107,31 +107,68 @@ export const AIDS = {
 };
 
 /**
- * Passeport Shidokan — booklet required to practice karate. Flat add-on of
- * `amount` € valid for `validityYears` years. Offered (checked by default for new
- * members) on any karate offer; it is NOT mandatory — a member who still has a
- * valid one can uncheck it, and an existing member can add it if theirs expired.
- * ⚠️ TO CONFIRM every season (price / validity).
+ * New-member fee — a flat `amount` € added AUTOMATICALLY (no opt-out) to every
+ * first-time registration (`nouvelAdherent === 'Oui'`), whatever the discipline.
+ * (Replaces the former optional "Passeport Shidokan" add-on.)
+ * No dedicated Sheet column: the "Nouvel adhérent" column already flags who pays it.
+ * ⚠️ TO CONFIRM every season (price).
  */
-export const PASSEPORT_SHIDOKAN = {
-  label: 'Passeport Shidokan',
+export const NEW_MEMBER_FEE = {
+  label: 'Frais nouvel adhérent',
   amount: 6,
-  validityYears: 6,
-  column: 'Passeport Shidokan',
 };
 
 /**
- * Passeport FFK — French federation licence booklet needed to compete. Optional
- * add-on of `amount` € valid for `validityYears` years, offered to competitors
- * on the contact offers (karate, Shido-Boxing, Shido-Mix-Martial). Buyable online.
- * ⚠️ TO CONFIRM every season (price / validity).
+ * Licence fees ALREADY INCLUDED in each offer's `priceAnnual`. They are NOT added
+ * on top: we only surface how the annual price is composed, in the payment detail.
+ * The FFK licence applies to every offer; the Shidokan licence applies to
+ * everything EXCEPT Cardio-Budo.
+ * ⚠️ TO CONFIRM every season (amounts).
  */
-export const PASSEPORT_FFK = {
-  label: 'Passeport FFK',
-  amount: 25,
-  validityYears: 8,
-  column: 'Passeport FFK',
+export const LICENSE_FEES = {
+  ffk: { label: 'licence FFK', amount: 39 },
+  shidokan: { label: 'licence Shidokan', amount: 20 },
 };
+
+/** Licences included in an offer's price (Shidokan excluded for Cardio-Budo). */
+export function licenseFeesForOffer(offer) {
+  if (!offer) return [];
+  const list = [LICENSE_FEES.ffk];
+  if (!offer.disciplines.includes('cardio')) list.push(LICENSE_FEES.shidokan);
+  return list;
+}
+
+/**
+ * Late-season proration. From `startDate`, the fee drops by `stepAmount` €, then
+ * by an extra `stepAmount` € at the start of every following month
+ * (Nov → −20 €, Dec → −40 €, Jan → −60 €, …). Applies to every offer.
+ * `maxAmount` caps the deduction in € (0 = no cap).
+ * ⚠️ TO CONFIRM every season (startDate must point to the current season).
+ */
+export const LATE_SEASON_DISCOUNT = {
+  enabled: true,
+  startDate: '2026-11-01',
+  stepAmount: 20,
+  maxAmount: 0, // 0 = no cap
+};
+
+/** Number of −stepAmount steps in effect at `refDate` (Nov = 1, Dec = 2, …); 0 before the start. */
+export function lateSeasonDiscountSteps(refDate = new Date()) {
+  if (!LATE_SEASON_DISCOUNT.enabled) return 0;
+  const start = new Date(`${LATE_SEASON_DISCOUNT.startDate}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || refDate < start) return 0;
+  const months =
+    (refDate.getFullYear() - start.getFullYear()) * 12 +
+    (refDate.getMonth() - start.getMonth());
+  return months + 1; // the start month itself already grants one step
+}
+
+/** Late-season discount in EUROS at `refDate` (capped by `maxAmount` when > 0). */
+export function lateSeasonDiscount(refDate = new Date()) {
+  const raw = lateSeasonDiscountSteps(refDate) * LATE_SEASON_DISCOUNT.stepAmount;
+  const cap = LATE_SEASON_DISCOUNT.maxAmount;
+  return cap > 0 ? Math.min(raw, cap) : raw;
+}
 
 /**
  * OFFLINE payment methods (collected at the office). The amount entered for each
@@ -253,8 +290,6 @@ export const FORM_COLUMNS = [
   'Section',
   'Motivations',
   'Grade Shidokan',
-  'Passeport Shidokan',
-  'Passeport FFK',
   'Cardio-Budo — Jours',
   'Mode de règlement',
   'Total cotisation',
