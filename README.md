@@ -18,10 +18,11 @@ et enregistrement automatique de l'adhérent dans un **Google Sheet** après pai
 > **Photo d'identité.** Champ facultatif du formulaire (images uniquement — `jpg`, `png`, `webp`,
 > `heic`… ; **pas de PDF** ; fichier source ≤ 20 Mo). La photo est redimensionnée côté navigateur
 > (JPEG, côté le plus long ≤ 1200 px), donc seuls quelques centaines de Ko sont réellement envoyés.
-> Une fois l'inscription finalisée, elle est déposée dans un dossier Google Drive sous le nom
-> **« Nom Prénom.jpg »** (un fichier de même nom est **écrasé**), et le **lien Drive** est inscrit dans
-> la colonne **Photo** du Sheet. Sans `GOOGLE_DRIVE_PHOTOS_FOLDER_ID`, l'envoi est simplement ignoré
-> (la colonne Photo reste vide, le reste fonctionne).
+> Une fois l'inscription finalisée, elle est déposée — **au nom du compte Google du club**, via
+> OAuth (un compte de service n'a pas de quota de stockage, cf. Étape 2 bis) — dans un dossier Drive
+> sous le nom **« Nom Prénom.jpg »** (un fichier de même nom est **écrasé**), et le **lien Drive** est
+> inscrit dans la colonne **Photo** du Sheet. Sans dossier ni identifiants OAuth configurés, l'envoi
+> est simplement ignoré (la colonne Photo reste vide, le reste fonctionne).
 
 **Paiement mixte.** Le total dû = cotisation − réduction famille − aides (PEPS/Pass'Sport).
 L'adhérent peut régler une partie **hors ligne** (chèque, chèques vacances, espèces, encaissés
@@ -86,6 +87,8 @@ mêmes clés se renseignent dans **Netlify → Site configuration → Environmen
 | `GOOGLE_SHEET_ID` | id du Sheet (entre `/d/` et `/edit` dans l'URL) |
 | `GOOGLE_SHEET_TAB` | nom de l'onglet (défaut « Feuille 1 ») |
 | `GOOGLE_DRIVE_PHOTOS_FOLDER_ID` | *(optionnel)* id du dossier Drive des photos d'identité (après `/folders/`). Non défini → photos ignorées |
+| `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` | *(photos)* client OAuth « Application de bureau » (upload Drive au nom du compte du club) |
+| `GOOGLE_OAUTH_REFRESH_TOKEN` | *(photos)* jeton de rafraîchissement obtenu via `npm run drive:token` |
 | `SITE_URL` | URL publique (construit les returnUrl/backUrl/errorUrl du paiement) |
 
 ---
@@ -140,13 +143,32 @@ Doc : <https://dev.helloasso.com/docs/obtenir-une-cl%C3%A9-api>
    **nouveau Sheet par saison** : les en-têtes, colonne Photo comprise, sont réécrits tout seuls.
 5. **Partager** ce Sheet (bouton *Partager*, accès **Éditeur**) avec l'email du compte de
    service (`…@…iam.gserviceaccount.com`).
-6. *(Optionnel — photos d'identité)* Créer un **dossier Google Drive** pour les photos, le
-   **partager en Éditeur** avec le compte de service, et noter son **id** (partie après `/folders/`
-   dans l'URL) → variable `GOOGLE_DRIVE_PHOTOS_FOLDER_ID`.
-   ⚠️ Un compte de service n'a **pas de quota de stockage** propre : un dépôt dans un dossier de
-   *Mon Drive* partagé peut échouer (« storage quota exceeded »). Le plus fiable est un **Drive
-   partagé** (*Shared Drive*) dont le compte de service est membre (*Gestionnaire de contenu*) —
-   le code gère déjà les Drive partagés (`supportsAllDrives`).
+6. *(Optionnel — photos d'identité)* Créer, **dans le Drive du compte Google du club**, un
+   **dossier** pour les photos et noter son **id** (partie après `/folders/` dans l'URL) →
+   variable `GOOGLE_DRIVE_PHOTOS_FOLDER_ID`. Puis configurer l'**OAuth Drive** (étape ci-dessous).
+
+### Étape 2 bis — OAuth Drive pour les photos (compte du club)
+
+> **Pourquoi ?** Un compte de service n'a **aucun quota de stockage** : y déposer une photo
+> échoue (« *Service Accounts do not have storage quota* »). On dépose donc la photo **au nom du
+> compte Google du club** (le fichier lui appartient, quota de 15 Go). Le **Sheet**, lui, reste
+> écrit par le compte de service (on n'y *crée* aucun fichier, on *ajoute* une ligne).
+> *(Alternative réservée à Google Workspace : un **Drive partagé** dont le compte de service est
+> membre — le code le gère via `supportsAllDrives`. Impossible avec un simple compte `@gmail.com`.)*
+
+1. **Console GCP → APIs & Services → Écran de consentement OAuth** : type **Externe**, renseigner
+   les champs obligatoires, ajouter le **scope** `.../auth/drive.file` (non sensible → pas de
+   vérification Google), puis **PUBLIER l'application** (« *In production* ») — sinon le refresh
+   token **expire au bout de 7 jours**.
+2. **APIs & Services → Identifiants → Créer un identifiant → ID client OAuth → Application de
+   bureau**. Noter le **client id** et le **client secret** → `GOOGLE_OAUTH_CLIENT_ID` /
+   `GOOGLE_OAUTH_CLIENT_SECRET`. Activer aussi la **Google Drive API** si ce n'est pas déjà fait.
+3. Générer le **refresh token** (une seule fois) :
+   ```bash
+   GOOGLE_OAUTH_CLIENT_ID=… GOOGLE_OAUTH_CLIENT_SECRET=… npm run drive:token
+   ```
+   Se connecter **avec le compte Google du club** (celui qui possède le dossier), accepter, puis
+   copier la valeur `GOOGLE_OAUTH_REFRESH_TOKEN` affichée dans le `.env` (et sur Netlify).
 
 ### Étape 3 — Remplir le `.env` local
 
@@ -194,8 +216,8 @@ Mettre la même URL publique dans `SITE_URL`. Parcours de test :
    `netlify env:import .env`.
 3. Basculer sur les valeurs **prod** : `HELLOASSO_ENV=prod`, `clientId/secret` de production,
    `SITE_URL` = l'URL réelle du site, Google Sheet **de production** partagé au compte de service
-   (et, si les photos sont activées, le **dossier Drive de production** partagé + son
-   `GOOGLE_DRIVE_PHOTOS_FOLDER_ID`).
+   (et, si les photos sont activées, `GOOGLE_DRIVE_PHOTOS_FOLDER_ID` + les 3 variables
+   `GOOGLE_OAUTH_*` — cf. Étape 2 bis).
 4. Déclarer le **webhook prod** : `https://<site-prod>/api/helloasso-webhook`.
 5. Après une **inscription réelle validée de bout en bout**, désactiver le Jotform.
 

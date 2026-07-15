@@ -8,7 +8,8 @@
     "dev": "netlify dev",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "drive:token": "node scripts/get-drive-refresh-token.mjs"
   },
   "dependencies": {
     "@netlify/blobs": "^8.1.0",
