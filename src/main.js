@@ -300,6 +300,37 @@ form.addEventListener('input', refresh);
 form.addEventListener('change', refresh);
 refresh();
 
+// --- ID photo: read + downscale client-side ---------------------------------
+// Phone photos are several MB; the submission travels as JSON (base64), so we
+// re-encode to a bounded-size JPEG to stay well under the function payload limit.
+const PHOTO_MAX_DIM = 1200; // px, longest side
+const PHOTO_QUALITY = 0.85;
+const PHOTO_MAX_BYTES = 20 * 1024 * 1024; // reject absurd files before decoding
+
+function readPhotoDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) return resolve(null);
+    if (!file.type.startsWith('image/')) return reject(new Error('Le fichier doit être une image.'));
+    if (file.size > PHOTO_MAX_BYTES) return reject(new Error('La photo est trop volumineuse.'));
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, PHOTO_MAX_DIM / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', PHOTO_QUALITY));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Impossible de lire la photo.'));
+    };
+    img.src = url;
+  });
+}
+
 // --- Submit ------------------------------------------------------------------
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -324,6 +355,16 @@ form.addEventListener('submit', async (e) => {
   const btn = $('#submitBtn');
   btn.disabled = true;
   btn.textContent = 'Traitement…';
+
+  // Optional ID photo: read + downscale before sending (attached to the payload).
+  try {
+    s.photo = await readPhotoDataUrl($('#photo').files[0]);
+  } catch (err) {
+    errorEl.textContent = err.message;
+    btn.disabled = false;
+    refresh();
+    return;
+  }
 
   try {
     const res = await fetch('/api/create-checkout', {

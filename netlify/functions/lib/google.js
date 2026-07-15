@@ -1,11 +1,15 @@
-// Writes to the Google Sheet through the Sheets API ONLY (no Drive).
-// The service account must have the Sheet shared as an "Editor".
+// Writes to the Google Sheet (Sheets API) and, optionally, uploads the member's
+// ID photo to a Google Drive folder (Drive API). Both use the SAME service
+// account: share the Sheet AND the Drive folder with it as an "Editor".
+// The photo upload is skipped entirely when GOOGLE_DRIVE_PHOTOS_FOLDER_ID is unset.
 
+import { Readable } from 'node:stream';
 import { google } from 'googleapis';
 import { FORM_COLUMNS } from '../../../src/shared/config.js';
 
 const SHEET_ID = process.env.GOOGLE_SHEET_ID;
 const TAB = process.env.GOOGLE_SHEET_TAB || 'Feuille 1';
+const PHOTOS_FOLDER_ID = process.env.GOOGLE_DRIVE_PHOTOS_FOLDER_ID;
 
 /** Loads the service account credentials from env (JSON or base64:JSON). */
 function loadServiceAccount() {
@@ -29,6 +33,19 @@ async function getSheets() {
   });
   _sheets = google.sheets({ version: 'v4', auth });
   return _sheets;
+}
+
+let _drive;
+async function getDrive() {
+  if (_drive) return _drive;
+  const creds = loadServiceAccount();
+  const auth = new google.auth.JWT({
+    email: creds.client_email,
+    key: creds.private_key,
+    scopes: ['https://www.googleapis.com/auth/drive'],
+  });
+  _drive = google.drive({ version: 'v3', auth });
+  return _drive;
 }
 
 let _headersEnsured = false;
@@ -90,6 +107,70 @@ export async function getColumnValues(colIndex) {
     range: `${quoteTab(TAB)}!${col}2:${col}`,
   });
   return (res.data.values || []).map((r) => r[0] ?? '');
+}
+
+/** Splits a `data:<mime>;base64,<payload>` URL into { mimeType, data:Buffer } (null if malformed). */
+function parseDataUrl(dataUrl) {
+  const m = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(String(dataUrl || ''));
+  if (!m) return null;
+  const mimeType = m[1] || 'application/octet-stream';
+  const data = m[2]
+    ? Buffer.from(m[3], 'base64')
+    : Buffer.from(decodeURIComponent(m[3]), 'utf8');
+  return { mimeType, data };
+}
+
+/** File extension for the mime types the front can send (it re-encodes to JPEG). */
+function extensionForMime(mimeType) {
+  return { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' }[mimeType] || '.jpg';
+}
+
+/**
+ * Uploads the member's ID photo to the Drive folder GOOGLE_DRIVE_PHOTOS_FOLDER_ID.
+ * The file is named "Nom Prénom.<ext>"; if a file with that exact name already
+ * exists in the folder, its content is OVERWRITTEN (same fileId kept).
+ * No-ops (returns { skipped }) when no folder is configured or no photo is given —
+ * the photo is optional and its upload must never block a paid registration.
+ * `supportsAllDrives` lets it target a Shared Drive (recommended, cf. README).
+ * @param {{ nom?: string, prenom?: string, dataUrl?: string }} arg
+ */
+export async function uploadMemberPhoto({ nom, prenom, dataUrl } = {}) {
+  if (!PHOTOS_FOLDER_ID) return { skipped: 'no folder configured' };
+  const parsed = parseDataUrl(dataUrl);
+  if (!parsed) return { skipped: 'no photo' };
+
+  const drive = await getDrive();
+  const name = `${(nom || '').trim()} ${(prenom || '').trim()}`.trim() + extensionForMime(parsed.mimeType);
+
+  // Look for an existing file with the same name in the folder (→ overwrite).
+  const escaped = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  const list = await drive.files.list({
+    q: `name = '${escaped}' and '${PHOTOS_FOLDER_ID}' in parents and trashed = false`,
+    fields: 'files(id, name)',
+    spaces: 'drive',
+    pageSize: 1,
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
+  });
+
+  const media = { mimeType: parsed.mimeType, body: Readable.from(parsed.data) };
+  const existing = list.data.files?.[0];
+  if (existing) {
+    const res = await drive.files.update({
+      fileId: existing.id,
+      media,
+      fields: 'id, webViewLink',
+      supportsAllDrives: true,
+    });
+    return { id: existing.id, name, url: res.data.webViewLink || '', updated: true };
+  }
+  const res = await drive.files.create({
+    requestBody: { name, parents: [PHOTOS_FOLDER_ID] },
+    media,
+    fields: 'id, webViewLink',
+    supportsAllDrives: true,
+  });
+  return { id: res.data.id, name, url: res.data.webViewLink || '', created: true };
 }
 
 function columnLetter(index) {

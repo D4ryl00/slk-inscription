@@ -12,7 +12,7 @@ const oui = (b) => (b ? 'Oui' : 'Non');
  * @param {object} pay payment summary:
  *   { date, netTotalCents, onlineAmountCents, onlinePaymentId, onlinePlanLabel,
  *     offlinePayments:[{label,amountCents}], offlineTotalCents, familyDiscountCents,
- *     lateDiscountCents }
+ *     lateDiscountCents, photoUrl }
  * @returns {(string|number)[]} exactly FORM_COLUMNS.length values
  */
 export function buildSheetRow(s, pay) {
@@ -88,6 +88,7 @@ export function buildSheetRow(s, pay) {
     horsLigneCell,                                         // Offline payments
     aidCell('peps'),                                       // PEPS aid
     aidCell('passsport'),                                  // Pass'Sport aid
+    p.photoUrl || '',                                      // ID photo (Drive link)
   ];
 
   if (row.length !== FORM_COLUMNS.length) {

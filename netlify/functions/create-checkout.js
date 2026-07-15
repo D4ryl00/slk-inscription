@@ -8,7 +8,7 @@
 import { getStore } from '@netlify/blobs';
 import { buildInstallments, computePrice } from '../../src/shared/pricing.js';
 import { buildSheetRow } from '../../src/shared/sheet-row.js';
-import { appendRow } from './lib/google.js';
+import { appendRow, uploadMemberPhoto } from './lib/google.js';
 import { createCheckoutIntent } from './lib/helloasso.js';
 
 const REQUIRED = ['prenom', 'nom', 'email', 'dateNaissance', 'offerId', 'paymentPlan'];
@@ -46,6 +46,15 @@ export default async (req) => {
 
   // ─── 100% offline case: no card payment → direct write ──────────────────────
   if (price.cbAmountCents <= 0) {
+    // Optional ID photo → Drive FIRST, so its link goes into the row. Non-fatal:
+    // an upload failure must not block registering a member who's already paid.
+    let photoUrl = '';
+    try {
+      const uploaded = await uploadMemberPhoto({ nom: s.nom, prenom: s.prenom, dataUrl: s.photo });
+      photoUrl = uploaded?.url || '';
+    } catch (err) {
+      console.error('create-checkout: photo upload (offline)', err);
+    }
     try {
       await appendRow(
         buildSheetRow(s, {
@@ -58,6 +67,7 @@ export default async (req) => {
           offlineTotalCents: price.offlineTotalCents,
           familyDiscountCents: price.familyDiscountCents,
           lateDiscountCents: price.lateDiscountCents,
+          photoUrl,
         }),
       );
     } catch (err) {

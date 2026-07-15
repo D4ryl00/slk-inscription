@@ -8,7 +8,7 @@
 import { getStore } from '@netlify/blobs';
 import { extractPaymentReference, getCheckoutIntent, isCheckoutPaid } from './lib/helloasso.js';
 import { extractMemberId, verifyHelloAssoSignature } from './lib/webhook-utils.js';
-import { appendRow, getColumnValues } from './lib/google.js';
+import { appendRow, getColumnValues, uploadMemberPhoto } from './lib/google.js';
 import { PAIEMENT_COL_INDEX, buildSheetRow, paymentCellMatches } from '../../src/shared/sheet-row.js';
 
 export default async (req) => {
@@ -78,6 +78,18 @@ export default async (req) => {
     console.error('webhook: dedup', err);
   }
 
+  // Optional ID photo → Drive FIRST, so its link goes into the row. Non-fatal:
+  // the payment is confirmed; a Drive hiccup must not trigger retries or lose the
+  // member (the link is simply left empty in that case).
+  const sub = record.submission || {};
+  let photoUrl = '';
+  try {
+    const uploaded = await uploadMemberPhoto({ nom: sub.nom, prenom: sub.prenom, dataUrl: sub.photo });
+    photoUrl = uploaded?.url || '';
+  } catch (err) {
+    console.error('webhook: photo upload', err);
+  }
+
   const pay = {
     date: order.date || new Date().toISOString(),
     netTotalCents: record.price.netTotalCents,
@@ -88,6 +100,7 @@ export default async (req) => {
     offlineTotalCents: record.price.offlineTotalCents || 0,
     familyDiscountCents: record.price.familyDiscountCents || 0,
     lateDiscountCents: record.price.lateDiscountCents || 0,
+    photoUrl,
   };
 
   try {

@@ -7,11 +7,21 @@ et enregistrement automatique de l'adhérent dans un **Google Sheet** après pai
 - **Front** statique (Vite) hébergé sur Netlify
 - **Fonctions** serverless Netlify (détiennent les secrets)
 - **HelloAsso Checkout** = caisse CB (gratuit)
-- **Google Sheet** = registre des adhérents (API Sheets seule, pas de Drive)
+- **Google Sheet** = registre des adhérents (API Sheets)
+- **Google Drive** = dossier des **photos d'identité** (optionnel, API Drive)
 
-> Aucun document n'est collecté en ligne : le formulaire informe des pièces à rapporter
+> Une seule pièce est collectée en ligne : la **photo d'identité**, et elle est **facultative**.
+> Les autres pièces ne sont pas envoyées en ligne : le formulaire informe de ce qu'il faut rapporter
 > au bureau (attestation mineur / certificat majeur / fond d'œil+ECG pour les disciplines
-> de contact / justificatif d'aide). Le suivi des pièces reste manuel dans le Sheet.
+> de contact / justificatif d'aide). Le suivi de ces pièces reste manuel dans le Sheet.
+
+> **Photo d'identité.** Champ facultatif du formulaire (images uniquement — `jpg`, `png`, `webp`,
+> `heic`… ; **pas de PDF** ; fichier source ≤ 20 Mo). La photo est redimensionnée côté navigateur
+> (JPEG, côté le plus long ≤ 1200 px), donc seuls quelques centaines de Ko sont réellement envoyés.
+> Une fois l'inscription finalisée, elle est déposée dans un dossier Google Drive sous le nom
+> **« Nom Prénom.jpg »** (un fichier de même nom est **écrasé**), et le **lien Drive** est inscrit dans
+> la colonne **Photo** du Sheet. Sans `GOOGLE_DRIVE_PHOTOS_FOLDER_ID`, l'envoi est simplement ignoré
+> (la colonne Photo reste vide, le reste fonctionne).
 
 **Paiement mixte.** Le total dû = cotisation − réduction famille − aides (PEPS/Pass'Sport).
 L'adhérent peut régler une partie **hors ligne** (chèque, chèques vacances, espèces, encaissés
@@ -29,8 +39,15 @@ Front → POST /api/create-checkout
 Paiement HelloAsso (CB) → webhook POST /api/helloasso-webhook
           ├─ vérifie le paiement via l'API (re-GET, anti-fraude)
           ├─ relit la soumission dans Blobs
-          └─ APPEND la ligne dans le Google Sheet, puis purge le blob
+          ├─ APPEND la ligne dans le Google Sheet
+          ├─ dépose la photo d'identité dans Drive (si fournie) — non bloquant
+          └─ purge le blob
 ```
+
+La photo est déposée **au moment de la finalisation** (webhook après paiement, ou directement
+pour un règlement 100 % hors ligne) : un panier abandonné ne laisse ni ligne ni photo. L'envoi
+de la photo est **non bloquant** — un souci Drive n'empêche jamais l'enregistrement d'un adhérent
+qui a payé (l'erreur est seulement loguée).
 
 La ligne n'apparaît dans le Sheet **qu'après paiement confirmé**. Un panier abandonné ne
 laisse aucune trace. Les lignes ajoutées à la main par le bureau (adhésions hors ligne)
@@ -46,11 +63,11 @@ src/
     config.js      tarifs, disciplines, aides, EN-TÊTES du Sheet   ⚠️ à confirmer
     pricing.js     calcul du prix + échéances (source de vérité)
     docs.js        pièces à rapporter selon la catégorie
-    sheet-row.js   mapping soumission+paiement → 28 colonnes
+    sheet-row.js   mapping soumission+paiement → 29 colonnes (dont le lien photo)
 netlify/functions/
   create-checkout.js · helloasso-webhook.js
   lib/helloasso.js   OAuth + checkout-intent + vérification paiement
-  lib/google.js      Google Sheets (append + déduplication)
+  lib/google.js      Google Sheets (append + déduplication) + Drive (photo d'identité)
 test/pricing.test.js
 ```
 
@@ -68,6 +85,7 @@ mêmes clés se renseignent dans **Netlify → Site configuration → Environmen
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | JSON de la clé du compte de service (ou `base64:…`) |
 | `GOOGLE_SHEET_ID` | id du Sheet (entre `/d/` et `/edit` dans l'URL) |
 | `GOOGLE_SHEET_TAB` | nom de l'onglet (défaut « Feuille 1 ») |
+| `GOOGLE_DRIVE_PHOTOS_FOLDER_ID` | *(optionnel)* id du dossier Drive des photos d'identité (après `/folders/`). Non défini → photos ignorées |
 | `SITE_URL` | URL publique (construit les returnUrl/backUrl/errorUrl du paiement) |
 
 ---
@@ -101,19 +119,34 @@ HelloAsso échoue faute de clés) — c'est normal, on renseigne `.env` aux éta
 
 Doc : <https://dev.helloasso.com/docs/obtenir-une-cl%C3%A9-api>
 
-### Étape 2 — Compte de service Google (API Sheets uniquement)
+### Étape 2 — Compte de service Google (Sheets + Drive optionnel)
 
 1. **Console GCP** (console.cloud.google.com) → nouveau projet.
-2. *APIs & Services* → **activer « Google Sheets API »** (surtout **pas** l'API Drive).
+2. *APIs & Services* → **activer « Google Sheets API »**. Activer aussi **« Google Drive API »**
+   uniquement si vous voulez collecter les **photos d'identité** (facultatif).
 3. *IAM & Admin → Comptes de service* → créer un compte de service → onglet *Clés* →
    **Ajouter une clé → JSON** (un fichier `.json` se télécharge).
 4. Créer (ou dupliquer) un **Google Sheet de test** dont la **1re ligne** reprend, à partir de
    la **colonne A**, les en-têtes de `FORM_COLUMNS` (`src/shared/config.js`) — ce sont les seules
-   colonnes écrites par le site. Le bureau peut ajouter **à droite**, à la main, ses propres
-   colonnes de suivi (CERTIF MÉD, PHOTO, ABANDON, Grade…) : le code n'y touche jamais. Noter
-   l'**id** du Sheet (dans l'URL).
+   colonnes écrites par le site. La **dernière** est **Photo** — elle reçoit le **lien Drive** de la
+   photo **envoyée en ligne** ; elle reste **vide** quand l'adhérent n'en a pas fourni (le champ est
+   facultatif). Ces adhérents apportent leur photo au bureau : le bureau garde donc **sa propre**
+   colonne de suivi photo (ex. « PHOTO reçue O/N ») à côté de ses autres colonnes de suivi
+   (CERTIF MÉD, ABANDON, Grade…). Le bureau ajoute ces colonnes **à droite** du bloc « site », à la
+   main : le code n'y touche jamais. Noter l'**id** du Sheet (dans l'URL).
+   ⚠️ Sur un Sheet **déjà en service**, l'ajout de la colonne **Photo** rallonge le bloc « site » :
+   insérez-la à sa position (juste après « Aide Pass'Sport »), sinon le lien photo écraserait la
+   1re colonne de suivi du bureau (l'écriture est **positionnelle**). Le plus simple reste un
+   **nouveau Sheet par saison** : les en-têtes, colonne Photo comprise, sont réécrits tout seuls.
 5. **Partager** ce Sheet (bouton *Partager*, accès **Éditeur**) avec l'email du compte de
    service (`…@…iam.gserviceaccount.com`).
+6. *(Optionnel — photos d'identité)* Créer un **dossier Google Drive** pour les photos, le
+   **partager en Éditeur** avec le compte de service, et noter son **id** (partie après `/folders/`
+   dans l'URL) → variable `GOOGLE_DRIVE_PHOTOS_FOLDER_ID`.
+   ⚠️ Un compte de service n'a **pas de quota de stockage** propre : un dépôt dans un dossier de
+   *Mon Drive* partagé peut échouer (« storage quota exceeded »). Le plus fiable est un **Drive
+   partagé** (*Shared Drive*) dont le compte de service est membre (*Gestionnaire de contenu*) —
+   le code gère déjà les Drive partagés (`supportsAllDrives`).
 
 ### Étape 3 — Remplir le `.env` local
 
@@ -160,7 +193,9 @@ Mettre la même URL publique dans `SITE_URL`. Parcours de test :
 2. Renseigner les variables d'env Netlify — UI, ou en une fois : `netlify link` puis
    `netlify env:import .env`.
 3. Basculer sur les valeurs **prod** : `HELLOASSO_ENV=prod`, `clientId/secret` de production,
-   `SITE_URL` = l'URL réelle du site, Google Sheet **de production** partagé au compte de service.
+   `SITE_URL` = l'URL réelle du site, Google Sheet **de production** partagé au compte de service
+   (et, si les photos sont activées, le **dossier Drive de production** partagé + son
+   `GOOGLE_DRIVE_PHOTOS_FOLDER_ID`).
 4. Déclarer le **webhook prod** : `https://<site-prod>/api/helloasso-webhook`.
 5. Après une **inscription réelle validée de bout en bout**, désactiver le Jotform.
 

@@ -341,6 +341,7 @@ export const FORM_COLUMNS = [
   'Règlements hors ligne',
   'Aide PEPS',
   'Aide Pass\'Sport',
+  'Photo', // lien Drive de la photo d'identité (vide si non fournie)
 ];
 
 /** Days offered for Cardio Budo. */
