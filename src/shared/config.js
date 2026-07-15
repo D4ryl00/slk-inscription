@@ -27,28 +27,28 @@ export const DISCIPLINES = {
 export const OFFERS = [
   {
     id: 'karate-mix-boxing-enfant',
-    label: 'Karaté Shidokan + Shido-Mix-Martial + Shido-Boxing — Enfant / Ado',
+    label: 'Karaté Shidokan + Shidokan Triathlon — Enfant / Ado',
     category: 'enfant',
     disciplines: ['karate', 'mma', 'boxing'],
     priceAnnual: 265,
   },
   {
     id: 'karate-mix-boxing-adulte',
-    label: 'Karaté Shidokan + Shido-Mix-Martial + Shido-Boxing — Adulte',
+    label: 'Karaté Shidokan + Shidokan Triathlon — Adulte',
     category: 'adulte',
     disciplines: ['karate', 'mma', 'boxing'],
     priceAnnual: 330,
   },
   {
     id: 'mix-boxing-enfant',
-    label: 'Shido-Mix-Martial + Shido-Boxing — Enfant / Ado',
+    label: 'Shidokan Triathlon — Enfant / Ado',
     category: 'enfant',
     disciplines: ['mma', 'boxing'],
     priceAnnual: 265,
   },
   {
     id: 'mix-boxing-adulte',
-    label: 'Shido-Mix-Martial + Shido-Boxing — Adulte',
+    label: 'Shidokan Triathlon — Adulte',
     category: 'adulte',
     disciplines: ['mma', 'boxing'],
     priceAnnual: 280,
