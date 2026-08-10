@@ -203,7 +203,7 @@ https://<url-publique>/api/helloasso-webhook
 ```
 
 Mettre la même URL publique dans `SITE_URL`. Parcours de test :
-1. Ouvrir le site, remplir une adhésion (tester mineur, puis majeur, puis majeur + Shido-Boxing).
+1. Ouvrir le site, remplir une adhésion (tester mineur, puis majeur, puis majeur + Shidokan Triathlon).
 2. Payer avec une **carte de test** sandbox.
 3. Vérifier qu'une **ligne apparaît dans le Google Sheet** (colonnes « site » remplies,
    colonnes « bureau » vides, `PAIEMENT` renseigné). Un paiement abandonné ne crée aucune ligne.

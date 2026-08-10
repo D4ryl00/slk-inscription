@@ -35,16 +35,16 @@ export function requiredDocuments({ isMinor, offerId, aid } = {}) {
   const hasStriking = disciplines.includes('boxing') || disciplines.includes('mma');
   const docs = [];
 
-  // ID photo: mandatory for karate; for Shido-Boxing and Shido-Mix-Martial,
-  // only for competitors.
+  // ID photo: mandatory for karate; for the Shidokan Triathlon, only for
+  // competitors.
   if (hasKarate || hasStriking) {
     docs.push({
       id: 'photo-identite',
       label: "1 photo d'identité",
       help: hasKarate
         ? 'Obligatoire pour le karaté.' +
-          (hasStriking ? ' (Également requise pour les compétiteurs en Shido-Boxing / Shido-Mix-Martial.)' : '')
-        : 'Obligatoire pour les compétiteurs en Shido-Boxing / Shido-Mix-Martial.',
+          (hasStriking ? ' (Également requise pour les compétiteurs en Shidokan Triathlon.)' : '')
+        : 'Obligatoire pour les compétiteurs en Shidokan Triathlon.',
     });
   }
 

@@ -7,12 +7,17 @@
  * Disciplines offered by the club.
  * `contact: true` triggers the stricter medical requirement (fundus exam + ECG)
  * for ADULTS who fight with KO — cf. FFKarate note. Shidokan karate is a
- * full-contact (KO) karate, just like Shido-Boxing / Shido-Mix-Martial.
+ * full-contact (KO) karate, just like the Shidokan Triathlon.
  */
 export const DISCIPLINES = {
   karate: { label: 'Karaté Shidokan', contact: true },
-  mma: { label: 'Shido-Mix-Martial', contact: true },
-  boxing: { label: 'Shido-Boxing', contact: true },
+  // `mma` + `boxing` are the two halves of what is now sold as a single
+  // "Shidokan Triathlon" formula (the club's planning calls it "Triathlon des
+  // arts martiaux"). The two keys survive because OFFERS and the documents
+  // checklist still reference them individually; the label is shared because
+  // members only ever see the combined product name.
+  mma: { label: 'Shidokan Triathlon', contact: true },
+  boxing: { label: 'Shidokan Triathlon', contact: true },
   // TODO CONFIRM: does Cardio Budo (fitness) require a fundus exam + ECG?
   // Treated as NON-contact by default (no sparring / competition).
   cardio: { label: 'Cardio Budo Kick-Boxing', contact: false },
