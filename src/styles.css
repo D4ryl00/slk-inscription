@@ -21,7 +21,10 @@ body {
 .head { text-align: center; margin-bottom: 20px; }
 .head h1 { margin: 0 0 4px; font-size: 1.6rem; }
 .sub { color: var(--muted); margin: 0; }
-.logo { display: block; width: 100%; max-width: 460px; height: auto; margin: 0 auto 14px; }
+/* 640px, not the former 460px: the banner is a wide, short strip (ratio ~7.2
+   against the previous ~4.6), so the old cap rendered it 64px tall and left the
+   roundels and the affiliation line too small to read. */
+.logo { display: block; width: 100%; max-width: 640px; height: auto; margin: 0 auto 14px; }
 
 .planning { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
 
