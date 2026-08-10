@@ -308,6 +308,91 @@ form.addEventListener('input', refresh);
 form.addEventListener('change', refresh);
 refresh();
 
+// --- Planning lightbox ------------------------------------------------------
+// Enlarging the schedule used to open it in another tab. It now opens over the
+// page in a native <dialog>: no navigation, so the form keeps everything the
+// member already typed. Escape and the backdrop close it for free; the ✕ is
+// there because that is what people look for on a touch screen.
+const planningLink = $('#planningLink');
+const planningDialog = $('#planningDialog');
+
+// It opens fitted to the window, and zooms on demand: on a phone the schedule
+// is a wide landscape image, so "fitted" is only ~1.1x the inline thumbnail and
+// the timetables stay unreadable without zooming in.
+const PLANNING_ZOOM = 2.5; // × the fitted size, capped at the image's own pixels
+
+if (planningLink && planningDialog) {
+  const thumb = planningLink.querySelector('img');
+  const full = $('#planningDialogImg');
+  const zoomBtn = $('#planningZoom');
+  full.src = thumb.getAttribute('src');
+  full.alt = thumb.alt;
+
+  const isZoomed = () => planningDialog.classList.contains('is-zoomed');
+
+  /** Back to "whole schedule, as large as the window allows". */
+  function fit() {
+    planningDialog.classList.remove('is-zoomed');
+    full.style.width = '';
+    planningDialog.scrollTo(0, 0);
+    zoomBtn.textContent = '+';
+    zoomBtn.setAttribute('aria-label', 'Zoomer sur le planning');
+    refreshZoomAffordance();
+  }
+
+  /** Zoom in, keeping the point at (clientX, clientY) under the finger. */
+  function zoom(clientX, clientY) {
+    const before = full.getBoundingClientRect();
+    const fx = (clientX - before.left) / before.width;
+    const fy = (clientY - before.top) / before.height;
+
+    planningDialog.classList.add('is-zoomed');
+    full.style.width = `${Math.min(full.naturalWidth, before.width * PLANNING_ZOOM)}px`;
+    zoomBtn.textContent = '−';
+    zoomBtn.setAttribute('aria-label', 'Afficher le planning entier');
+
+    // offsetLeft/Top are relative to the dialog: it is the offsetParent here.
+    const box = planningDialog.getBoundingClientRect();
+    planningDialog.scrollLeft = full.offsetLeft + fx * full.offsetWidth - (clientX - box.left);
+    planningDialog.scrollTop = full.offsetTop + fy * full.offsetHeight - (clientY - box.top);
+  }
+
+  /** Zooming is pointless once the image is already shown at its own pixels. */
+  function refreshZoomAffordance() {
+    const shown = full.getBoundingClientRect().width;
+    planningDialog.classList.toggle('can-zoom', shown < full.naturalWidth - 1);
+  }
+
+  function toggleZoomFromCenter() {
+    if (isZoomed()) return fit();
+    const r = full.getBoundingClientRect();
+    zoom(r.left + r.width / 2, r.top + r.height / 2);
+  }
+
+  planningLink.addEventListener('click', (e) => {
+    // Leave new-tab intents (cmd/ctrl/shift-click) to the browser.
+    if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+    e.preventDefault();
+    planningDialog.showModal();
+    fit();
+  });
+  full.addEventListener('click', (e) => {
+    if (isZoomed()) fit();
+    else if (planningDialog.classList.contains('can-zoom')) zoom(e.clientX, e.clientY);
+  });
+  zoomBtn.addEventListener('click', toggleZoomFromCenter);
+  $('#planningClose').addEventListener('click', () => planningDialog.close());
+  // A click landing on the dialog itself is a click outside the image.
+  planningDialog.addEventListener('click', (e) => {
+    if (e.target === planningDialog) planningDialog.close();
+  });
+  // Reopening should always start from the fitted view.
+  planningDialog.addEventListener('close', fit);
+  window.addEventListener('resize', () => {
+    if (planningDialog.open && !isZoomed()) refreshZoomAffordance();
+  });
+}
+
 // --- ID photo: read + downscale client-side ---------------------------------
 // Phone photos are several MB; the submission travels as JSON (base64), so we
 // re-encode to a bounded-size JPEG to stay well under the function payload limit.

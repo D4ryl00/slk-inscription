@@ -69,7 +69,9 @@
         <!-- ── Class schedule ──────────────────────────────────────── -->
         <section class="card" id="planningCard">
           <h2>Planning des cours</h2>
-          <a href="/planning-slk.webp" target="_blank" rel="noopener">
+          <!-- The href is the no-JS / "open in a new tab" fallback; main.js
+               intercepts the plain click to open the lightbox instead. -->
+          <a href="/planning-slk.webp" id="planningLink" aria-haspopup="dialog">
             <img class="planning" src="/planning-slk.webp"
               alt="Planning hebdomadaire des cours (Karaté, Triathlon des arts martiaux, Cardio Budo) du lundi au samedi" />
           </a>
@@ -183,6 +185,22 @@
         </section>
       </form>
     </main>
+
+    <!-- Enlarged planning. Kept OUTSIDE the form on purpose: a native <dialog>
+         opens in the top layer without navigating, so every field the member
+         already filled in stays untouched behind it. src/alt are copied from
+         the inline image by main.js to keep a single source of truth. -->
+    <dialog id="planningDialog" class="lightbox" aria-label="Planning des cours">
+      <!-- Fixed, so both stay reachable while panning a zoomed schedule. -->
+      <div class="lightbox-controls">
+        <button type="button" class="lightbox-btn lightbox-zoom" id="planningZoom"
+          aria-label="Zoomer sur le planning">+</button>
+        <button type="button" class="lightbox-btn" id="planningClose"
+          aria-label="Fermer l'aperçu du planning">&times;</button>
+      </div>
+      <img class="lightbox-img" id="planningDialogImg" src="" alt="" />
+    </dialog>
+
     <script type="module" src="./main.js"></script>
   </body>
 </html>

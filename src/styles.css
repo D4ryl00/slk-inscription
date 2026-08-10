@@ -105,6 +105,74 @@ button[type="submit"]:disabled { opacity: 0.6; cursor: default; }
 /* Red asterisk for required fields */
 .req { color: var(--error); font-weight: 700; }
 
+/* Planning lightbox — opens the schedule over the page (no navigation, the form
+   keeps its state). Closed by the ✕, the Escape key or a click outside the
+   image. Two states: fitted to the window, and zoomed with panning. */
+.lightbox {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  margin: 0;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  overflow: hidden; /* fitted: nothing to scroll */
+}
+/* Scoped to [open] so the UA's `dialog:not([open]) { display: none }` still
+   wins when the dialog is closed. `margin: auto` on the flex item (rather than
+   place-content) is what keeps the top-left reachable once it overflows. */
+.lightbox[open] { display: flex; }
+.lightbox::backdrop { background: rgba(0, 0, 0, 0.92); }
+
+.lightbox-img {
+  display: block;
+  margin: auto;
+  /* Fitted: the whole schedule, as large as the window allows. Only max-* are
+     set, so the aspect ratio is always preserved. */
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+}
+.lightbox.can-zoom .lightbox-img { cursor: zoom-in; }
+.lightbox.is-zoomed { overflow: auto; }
+.lightbox.is-zoomed .lightbox-img {
+  /* Zoomed: width is set inline by main.js, height follows the ratio — driving
+     width alone can never distort, and keeps the ratio out of the stylesheet
+     (the club swaps this image every season). */
+  max-width: none;
+  max-height: none;
+  height: auto;
+  cursor: zoom-out;
+}
+
+/* Fixed, so the controls never scroll away from a panned schedule. */
+.lightbox-controls {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+}
+.lightbox-btn {
+  width: 44px; /* minimum comfortable touch target */
+  height: 44px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.lightbox-btn:hover { background: rgba(0, 0, 0, 0.85); }
+.lightbox-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+/* Nothing to zoom into once the image is shown at its own pixels. */
+.lightbox:not(.can-zoom) .lightbox-zoom { display: none; }
+
 a { color: var(--brand); }
 
 .docs ul { margin: 6px 0 0; padding-left: 18px; }
