@@ -10,6 +10,7 @@ import {
   OFFERS,
   PAYMENT_METHODS,
   getOffer,
+  offerAgeWarning,
 } from './shared/config.js';
 import { computePrice, formatEuros } from './shared/pricing.js';
 import { isMinorFromBirthdate, requiredDocuments } from './shared/docs.js';
@@ -25,6 +26,8 @@ for (const o of OFFERS) {
   opt.textContent = `${o.label} — ${formatEuros(o.priceAnnual * 100)}`;
   offerSelect.appendChild(opt);
 }
+
+const ageWarningEl = $('#ageWarning');
 
 // --- Cardio-Budo days --------------------------------------------------------
 const cardioWrap = $('#cardioDaysWrap');
@@ -205,6 +208,11 @@ function refresh() {
       legend.textContent = `Cardio-Budo — sélectionnez ${cardioSessions} jour${cardioSessions > 1 ? 's' : ''} par semaine`;
     }
   }
+
+  // Age band: advisory notice only, never blocks the submit.
+  const ageWarn = offerAgeWarning(s.offerId, s.dateNaissance);
+  ageWarningEl.textContent = ageWarn ? ageWarn.message : '';
+  ageWarningEl.classList.toggle('hidden', !ageWarn);
 
   // Grade only for Karate offers
   karateFields.classList.toggle('hidden', !isKarate);

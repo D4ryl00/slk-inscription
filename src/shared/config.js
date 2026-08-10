@@ -28,6 +28,16 @@ export const DISCIPLINES = {
  * `priceAnnual` in euros (total amount for the season).
  * ⚠️ TO CONFIRM / COMPLETE: list and prices taken from the HelloAsso 2025-2026
  * screenshot; add a possible "Karaté seul" price if one exists.
+ *
+ * `ageRange` ({ min, max } in years, `null` = unbounded) mirrors the age bands
+ * printed on the club's planning. It NEVER blocks a registration: it only feeds
+ * the advisory notice in the form (cf. `offerAgeWarning`), because the office
+ * has the final say on borderline cases.
+ * The bands are a UNION over the offer's disciplines, not an intersection: the
+ * planning opens karate at 6 but the triathlon at 8, and there is no
+ * "Karaté seul" offer, so a 6-year-old karateka has to buy the combined
+ * formula. Warning at 8 there would flag a perfectly normal registration.
+ * ⚠️ TO CONFIRM every season (the bands follow the planning).
  */
 export const OFFERS = [
   {
@@ -36,6 +46,7 @@ export const OFFERS = [
     category: 'enfant',
     disciplines: ['karate', 'mma', 'boxing'],
     priceAnnual: 265,
+    ageRange: { min: 6, max: 13 }, // karaté 6-13 ∪ triathlon 8-13
   },
   {
     id: 'karate-mix-boxing-adulte',
@@ -43,6 +54,7 @@ export const OFFERS = [
     category: 'adulte',
     disciplines: ['karate', 'mma', 'boxing'],
     priceAnnual: 330,
+    ageRange: { min: 14, max: null },
   },
   {
     id: 'mix-boxing-enfant',
@@ -50,6 +62,7 @@ export const OFFERS = [
     category: 'enfant',
     disciplines: ['mma', 'boxing'],
     priceAnnual: 265,
+    ageRange: { min: 8, max: 13 },
   },
   {
     id: 'mix-boxing-adulte',
@@ -57,7 +70,9 @@ export const OFFERS = [
     category: 'adulte',
     disciplines: ['mma', 'boxing'],
     priceAnnual: 280,
+    ageRange: { min: 14, max: null },
   },
+  // Cardio-Budo: the planning prints no age band → no `ageRange`, no warning.
   {
     id: 'cardio-1',
     label: 'Cardio Budo Kick-Boxing — 1 cours / semaine',
@@ -217,6 +232,75 @@ export function lateSeasonDiscount(refDate = new Date()) {
   const raw = lateSeasonDiscountSteps(refDate) * LATE_SEASON_DISCOUNT.stepAmount;
   const cap = LATE_SEASON_DISCOUNT.maxAmount;
   return cap > 0 ? Math.min(raw, cap) : raw;
+}
+
+/**
+ * Season identity, used to turn a birthdate into an age.
+ * A season is named after the civil year it starts in (September 2026 opens the
+ * "2026-2027" season). Registrations for the coming season open in July, so
+ * July→December belongs to the current civil year and January→June to the
+ * previous one — same window the late-season discount already assumes.
+ */
+export const SEASON = {
+  firstMonth: 7, // July, 1-based
+  timeZone: 'Europe/Paris',
+};
+
+/** Civil year the season in progress at `refDate` started in (August 2026 → 2026). */
+export function seasonYear(refDate = new Date()) {
+  const { year, month } = civilPartsIn(refDate, SEASON.timeZone);
+  return month + 1 >= SEASON.firstMonth ? year : year - 1;
+}
+
+/**
+ * Age of a member during the season, counted BY CIVIL YEAR (the club's rule):
+ * the age they reach during the season's opening year, whatever their birthday.
+ * A child born anywhere in 2020 is 6 for the 2026-2027 season.
+ * Returns null if the birthdate is missing or malformed.
+ */
+export function ageInSeason(birthdate, refDate = new Date()) {
+  const birth = parseCivilDate(birthdate);
+  if (!birth) return null;
+  return seasonYear(refDate) - birth.year;
+}
+
+/** Human-readable age band: "6 à 13 ans", "14 ans et plus", "13 ans et moins". */
+function formatAgeRange({ min, max }) {
+  if (min != null && max != null) return `${min} à ${max} ans`;
+  if (min != null) return `${min} ans et plus`;
+  return `${max} ans et moins`;
+}
+
+/**
+ * Advisory check: does the chosen offer match the member's age?
+ * Returns null when it matches, when the offer has no age band (Cardio-Budo) or
+ * when either input is missing — and a descriptive object otherwise.
+ *
+ * This NEVER blocks the registration. The club wants the member to keep the
+ * final say (a precocious kid, an adult training with the teens…), so the form
+ * only surfaces the mismatch as a notice.
+ */
+export function offerAgeWarning(offerId, birthdate, refDate = new Date()) {
+  const offer = getOffer(offerId);
+  if (!offer?.ageRange) return null;
+  const age = ageInSeason(birthdate, refDate);
+  if (age === null) return null;
+
+  const { min, max } = offer.ageRange;
+  const tooYoung = min != null && age < min;
+  const tooOld = max != null && age > max;
+  if (!tooYoung && !tooOld) return null;
+
+  const year = seasonYear(refDate);
+  return {
+    age,
+    seasonYear: year,
+    range: offer.ageRange,
+    message:
+      `L'adhérent aura ${age} ans en ${year}, alors que la formule « ${offer.label} » ` +
+      `s'adresse aux ${formatAgeRange(offer.ageRange)}. ` +
+      `Vous pouvez tout de même poursuivre : le bureau du club validera l'inscription.`,
+  };
 }
 
 /**
