@@ -105,6 +105,15 @@ button[type="submit"]:disabled { opacity: 0.6; cursor: default; }
   color: var(--ink);
 }
 
+/* Informational variant: the amber `.notice` flags something to look at (an
+   age/formula mismatch), so a plain heads-up sitting right above it needs a
+   calmer, non-alarming colour. */
+.notice.info {
+  background: #f2effc;
+  border-color: #d6cdf2;
+  border-left-color: var(--brand);
+}
+
 /* Red asterisk for required fields */
 .req { color: var(--error); font-weight: 700; }
 
