@@ -62,8 +62,8 @@ test('computePrice applies the incremental family discount', () => {
   assert.equal(p.totalCents, 18000 - 5000);        // 180 € − 50 €
 });
 
-test('aid values: Pass\'Sport 70 €, PEPS 30 €', () => {
-  assert.equal(AIDS.passsport.amount, 70);
+test('aid values: Pass\'Sport 50 €, PEPS 30 €', () => {
+  assert.equal(AIDS.passsport.amount, 50);
   assert.equal(AIDS.peps.amount, 30);
 });
 

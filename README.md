@@ -275,7 +275,7 @@ d'une nouvelle saison (ex. **2027-2028**), reprendre cette liste dans l'ordre, p
   incrémentale : chaque adhérent déclare combien de membres du foyer sont déjà inscrits, et la
   remise est répartie pour que le cumul = le barème (appliqué une seule fois). ⚠️ **Déclaratif** :
   repose sur l'honnêteté de la saisie ; le bureau peut recouper via le nom de famille dans le Sheet.
-- **Montants des aides** (`AIDS`) — Pass'Sport 70 €, PEPS 30 € (à revérifier chaque saison).
+- **Montants des aides** (`AIDS`) — Pass'Sport 50 €, PEPS 30 € (à revérifier chaque saison).
   Le PEPS est aussi appelé « Prime Enfant ».
 - **Moyens de paiement hors ligne** (`PAYMENT_METHODS`) — chèque, chèques vacances, espèces.
 - **Cardio Budo = discipline de contact ?** (`DISCIPLINES.cardio.contact`) — défaut : non.

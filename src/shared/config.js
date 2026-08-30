@@ -112,7 +112,7 @@ export const PAYMENT_PLANS = {
 export const AIDS = {
   passsport: {
     label: "Pass'Sport",
-    amount: 70,
+    amount: 50,
     requiresCode: true,
     column: "Aide Pass'Sport",
   },
