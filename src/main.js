@@ -290,7 +290,7 @@ function refresh() {
     const tariff = price.tariff ? TARIFFS[price.tariff] : null;
     const parts = [
       `Cotisation : ${formatEuros(price.baseCents)}` +
-        (tariff ? ` (tarif ${tariff.label}, ${tariff.range})` : ''),
+        (tariff ? ` (tarif ${tariff.label})` : ''),
     ];
     if (price.licenseFees?.length) {
       const lic = price.licenseFees
@@ -326,7 +326,12 @@ function refresh() {
   if (!s.offerId || minor === null) {
     list.innerHTML = '<li class="muted">Renseignez la date de naissance et la formule pour voir les pièces à rapporter.</li>';
   } else {
-    const docs = requiredDocuments({ isMinor: minor, offerId: s.offerId, aid: s.aid });
+    const docs = requiredDocuments({
+      isMinor: minor, // LEGAL minority today — not the tariff band
+      offerId: s.offerId,
+      tariff: price.ok ? price.tariff : null,
+      aid: s.aid,
+    });
     if (!docs.length) {
       list.innerHTML = '<li class="muted">Aucune pièce particulière à rapporter pour cette formule.</li>';
     }

@@ -21,13 +21,19 @@ export const DOC_LINKS = {
 };
 
 /**
+ * The checklists of a minor and of an adult are mutually exclusive: minority is
+ * a LEGAL fact, read at registration time, so it is what decides here — never
+ * the tariff, which the club counts by civil year and which therefore turns
+ * adult a few months earlier for anyone born late in the year.
+ *
  * @param {object} params
  * @param {boolean} params.isMinor  member is a minor at registration time
  * @param {string}  params.offerId  chosen offer (to know if it's a contact discipline)
+ * @param {'youth'|'adult'|null} [params.tariff] tariff band applied to the fee
  * @param {{type?: string}} [params.aid] selected aid
  * @returns {{id:string, label:string, help?:string, link?:string, linkLabel?:string}[]}
  */
-export function requiredDocuments({ isMinor, offerId, aid } = {}) {
+export function requiredDocuments({ isMinor, offerId, tariff, aid } = {}) {
   const offer = getOffer(offerId);
   const contact = offerIsContact(offer);
   const disciplines = offer?.disciplines || [];
@@ -49,6 +55,19 @@ export function requiredDocuments({ isMinor, offerId, aid } = {}) {
   }
 
   if (isMinor) {
+    // A member who turns 18 during the season pays the adult fee while still
+    // being a minor today. Left unsaid, the checklist below reads like a bug to
+    // someone who has just been quoted the adult price.
+    if (tariff === 'adult') {
+      docs.push({
+        id: 'mineur-tarif-adulte',
+        label: 'Encore mineur : les pièces ci-dessous restent obligatoires',
+        help:
+          'L\'adhérent aura 18 ans dans l\'année, ce qui fixe le tarif adulte, mais il est ' +
+          'encore mineur aujourd\'hui : la FFKarate demande donc le questionnaire de santé et ' +
+          'l\'attestation du responsable légal.',
+      });
+    }
     docs.push({
       id: 'questionnaire-mineur',
       label: 'Questionnaire de santé du licencié mineur (Annexe 1)',

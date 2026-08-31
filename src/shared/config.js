@@ -271,10 +271,15 @@ export function ageInSeason(birthdate, refDate = new Date()) {
  */
 export const YOUTH_TARIFF = { maxAge: 17 };
 
-/** Tariff bands, as shown to the member. */
+/**
+ * Tariff bands, as shown to the member. No age range in the label on purpose:
+ * the band is counted by civil year, so someone born late in the year is on the
+ * adult tariff months before their 18th birthday — printing "18 ans et plus"
+ * next to their fee would contradict the checklist, which reads legal minority.
+ */
 export const TARIFFS = {
-  youth: { key: 'youth', label: 'Enfant / Ado', range: "jusqu'à 17 ans" },
-  adult: { key: 'adult', label: 'Adulte', range: '18 ans et plus' },
+  youth: { key: 'youth', label: 'Enfant / Ado' },
+  adult: { key: 'adult', label: 'Adulte' },
 };
 
 /** Tariff band of a member aged `age` during the season; null if the age is unknown. */
