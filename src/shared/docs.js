@@ -44,13 +44,19 @@ export function requiredDocuments({ isMinor, offerId, tariff, aid } = {}) {
   // ID photo: mandatory for karate; for the Shidokan Triathlon, only for
   // competitors.
   if (hasKarate || hasStriking) {
+    const who = hasKarate
+      ? 'Obligatoire pour le karaté.' +
+        (hasStriking ? ' (Également requise pour les compétiteurs en Shidokan Triathlon.)' : '')
+      : 'Obligatoire pour les compétiteurs en Shidokan Triathlon.';
     docs.push({
       id: 'photo-identite',
       label: "1 photo d'identité",
-      help: hasKarate
-        ? 'Obligatoire pour le karaté.' +
-          (hasStriking ? ' (Également requise pour les compétiteurs en Shidokan Triathlon.)' : '')
-        : 'Obligatoire pour les compétiteurs en Shidokan Triathlon.',
+      // The online upload serves the digital licence, not the paper file: the
+      // office needs the printed photo either way. The form used to imply the
+      // upload spared the member from bringing one.
+      help:
+        `${who} À rapporter au bureau <strong>même si vous l'avez déjà envoyée en ligne</strong> ` +
+        "— l'envoi ne la remplace pas.",
     });
   }
 
