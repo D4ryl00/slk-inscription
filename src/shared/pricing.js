@@ -7,10 +7,13 @@ import {
   NEW_MEMBER_FEE,
   PAYMENT_METHODS,
   PAYMENT_PLANS,
+  ageInSeason,
   familyIncrementalDiscount,
   getOffer,
   lateSeasonDiscount,
   licenseFeesForOffer,
+  offerPriceAnnual,
+  tariffForAge,
 } from './config.js';
 
 const toCents = (euros) => Math.round(euros * 100);
@@ -23,6 +26,7 @@ export const formatEuros = (c) =>
  *
  * @param {object} selection
  * @param {string} selection.offerId
+ * @param {string} [selection.dateNaissance] 'YYYY-MM-DD'; sets the tariff band
  * @param {'1x'|'3x'} selection.paymentPlan
  * @param {number} [selection.familyAlreadyRegistered=0] household members already registered
  * @param {string} [selection.nouvelAdherent] 'Oui' → the flat new-member fee applies
@@ -31,7 +35,7 @@ export const formatEuros = (c) =>
  * @param {Date} [refDate=new Date()] reference date for the late-season proration
  * @returns {{
  *   ok: boolean, error?: string,
- *   offer?: object, plan?: object,
+ *   offer?: object, plan?: object, tariff?: 'youth'|'adult'|null,
  *   baseCents?: number, familyDiscountCents?: number, lateDiscountCents?: number,
  *   aidCents?: number, newMemberFeeCents?: number,
  *   licenseFees?: {label: string, amountCents: number}[],
@@ -48,7 +52,19 @@ export function computePrice(selection, refDate = new Date()) {
   const plan = PAYMENT_PLANS[selection?.paymentPlan];
   if (!plan) return { ok: false, error: 'Plan de paiement inconnu.' };
 
-  const baseCents = toCents(offer.priceAnnual);
+  // --- Tariff band, derived from the birthdate -------------------------------
+  // The club charges a youth rate up to 17 included even though the 14-17 train
+  // with the adults, so the age is what sets the price — never a chosen category.
+  const age = ageInSeason(selection?.dateNaissance, refDate);
+  const tariff = tariffForAge(age);
+  const priceAnnual = offerPriceAnnual(offer, age);
+  if (priceAnnual == null) {
+    return {
+      ok: false,
+      error: 'Renseignez votre date de naissance pour connaître le tarif de cette formule.',
+    };
+  }
+  const baseCents = toCents(priceAnnual);
 
   // --- Family discount (incremental flat amount based on already-registered members) --
   const familyDiscountCents = toCents(
@@ -110,6 +126,7 @@ export function computePrice(selection, refDate = new Date()) {
     ok: true,
     offer,
     plan,
+    tariff,
     baseCents,
     familyDiscountCents,
     lateDiscountCents,

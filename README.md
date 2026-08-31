@@ -240,7 +240,11 @@ d'une nouvelle saison (ex. **2027-2028**), reprendre cette liste dans l'ordre, p
    Vérifier aussi `stepAmount` (−20 €/mois) et `maxAmount` (`0` = pas de plafond).
 
 3. **Tarifs / formules** (`OFFERS`) — prix annuels, liste des formules, `sessions` Cardio et
-   tarifs des cours au Ticket (affichés dans `src/index.html`).
+   tarifs des cours au Ticket (affichés dans `src/index.html`). Une formule = **une discipline** :
+   le tarif jeune/adulte n'est pas choisi mais **déduit de la date de naissance**, via
+   `priceAnnual: { youth, adult }` et le seuil `YOUTH_TARIFF.maxAge` (17 ans inclus, car les
+   14-17 s'entraînent avec les adultes mais gardent le tarif enfant). `minAge` ne sert qu'à
+   l'avertissement non bloquant quand l'adhérent est sous le plancher du planning.
 
 4. **Frais nouvel adhérent** (`NEW_MEMBER_FEE.amount`) — forfait ajouté d'office à toute
    première inscription (pas de colonne dédiée : déduit de la colonne « Nouvel adhérent »).
@@ -271,6 +275,9 @@ d'une nouvelle saison (ex. **2027-2028**), reprendre cette liste dans l'ordre, p
 
 - **Tarifs / liste des formules** (`src/shared/config.js`, `OFFERS`) — repris de la capture
   HelloAsso 2025-2026 ; vérifier notamment l'existence d'un tarif « Karaté seul ».
+- **Seuil du tarif jeune** (`YOUTH_TARIFF.maxAge`) — 17 ans inclus. `OFFER_ID_ALIASES` fait le
+  pont avec les identifiants de formules de la saison précédente : supprimable une fois qu'aucun
+  paiement HelloAsso en attente ne peut plus les référencer.
 - **Réduction famille** (`FAMILY_DISCOUNT`) — barème −50/−70/−100 € **implémenté** de façon
   incrémentale : chaque adhérent déclare combien de membres du foyer sont déjà inscrits, et la
   remise est répartie pour que le cumul = le barème (appliqué une seule fois). ⚠️ **Déclaratif** :

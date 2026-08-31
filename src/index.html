@@ -90,13 +90,15 @@
             inclus et ses cours sont accessibles sans supplément.
           </p>
 
+          <!-- One option per discipline: the tariff comes from the birthdate
+               entered above, so there is no age category to pick here. -->
           <label>Formule
             <select name="offerId" id="offerId" required>
               <option value="" disabled selected>— Sélectionnez une formule —</option>
             </select>
           </label>
 
-          <!-- Advisory only: the age band does not block the registration -->
+          <!-- Advisory only: the age floor does not block the registration -->
           <p id="ageWarning" class="notice hidden" role="status"></p>
 
           <div id="cardioDaysWrap" class="hidden">

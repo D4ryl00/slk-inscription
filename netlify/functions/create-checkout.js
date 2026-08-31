@@ -33,6 +33,7 @@ export default async (req) => {
   // --- Price: server-side recompute, never the one sent by the front ----------
   const price = computePrice({
     offerId: s.offerId,
+    dateNaissance: s.dateNaissance, // sets the tariff band (youth up to 17, adult from 18)
     paymentPlan: s.paymentPlan,
     familyAlreadyRegistered: s.familyAlreadyRegistered,
     nouvelAdherent: s.nouvelAdherent,

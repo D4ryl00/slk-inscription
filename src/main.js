@@ -9,8 +9,11 @@ import {
   MOTIVATIONS_KARATE_ONLY,
   OFFERS,
   PAYMENT_METHODS,
+  TARIFFS,
+  ageInSeason,
   getOffer,
-  offerAgeWarning,
+  offerMinAgeWarning,
+  offerPriceAnnual,
 } from './shared/config.js';
 import { computePrice, formatEuros } from './shared/pricing.js';
 import { isMinorFromBirthdate, requiredDocuments } from './shared/docs.js';
@@ -19,12 +22,37 @@ const $ = (sel) => document.querySelector(sel);
 const form = $('#form');
 
 // --- Fill the offers list ---------------------------------------------------
+// One option per discipline. Their price depends on the birthdate, so the
+// options are created once and their LABEL is refreshed on every keystroke
+// (rewriting textContent keeps the member's selection, re-creating them wouldn't).
 const offerSelect = $('#offerId');
+const offerOptions = new Map();
 for (const o of OFFERS) {
   const opt = document.createElement('option');
   opt.value = o.id;
-  opt.textContent = `${o.label} — ${formatEuros(o.priceAnnual * 100)}`;
   offerSelect.appendChild(opt);
+  offerOptions.set(o.id, opt);
+}
+
+/** Whole euros, as printed on the club's price list: "265 €". */
+const wholeEuros = (amount) =>
+  new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+
+/** Option text: the applicable price once the age is known, both prices before. */
+function offerOptionLabel(offer, age) {
+  const price = offerPriceAnnual(offer, age);
+  if (price != null) return `${offer.label} — ${formatEuros(price * 100)}`;
+  const { youth, adult } = offer.priceAnnual;
+  return `${offer.label} — ${wholeEuros(youth)} ou ${wholeEuros(adult)} selon l'âge`;
+}
+
+function updateOfferLabels(age) {
+  for (const o of OFFERS) offerOptions.get(o.id).textContent = offerOptionLabel(o, age);
 }
 
 const ageWarningEl = $('#ageWarning');
@@ -209,8 +237,12 @@ function refresh() {
     }
   }
 
-  // Age band: advisory notice only, never blocks the submit.
-  const ageWarn = offerAgeWarning(s.offerId, s.dateNaissance);
+  // Offer prices follow the birthdate; the age also drives the notice below.
+  const age = ageInSeason(s.dateNaissance);
+  updateOfferLabels(age);
+
+  // Age floor: advisory notice only, never blocks the submit.
+  const ageWarn = offerMinAgeWarning(s.offerId, s.dateNaissance);
   ageWarningEl.textContent = ageWarn ? ageWarn.message : '';
   ageWarningEl.classList.toggle('hidden', !ageWarn);
 
@@ -233,6 +265,7 @@ function refresh() {
   // Price
   const price = computePrice({
     offerId: s.offerId,
+    dateNaissance: s.dateNaissance,
     paymentPlan: s.paymentPlan,
     familyAlreadyRegistered: s.familyAlreadyRegistered,
     nouvelAdherent: s.nouvelAdherent,
@@ -254,7 +287,11 @@ function refresh() {
     submitBtn.disabled = false;
     totalEl.textContent = formatEuros(price.totalCents);
     cbEl.textContent = formatEuros(price.cbAmountCents);
-    const parts = [`Cotisation : ${formatEuros(price.baseCents)}`];
+    const tariff = price.tariff ? TARIFFS[price.tariff] : null;
+    const parts = [
+      `Cotisation : ${formatEuros(price.baseCents)}` +
+        (tariff ? ` (tarif ${tariff.label}, ${tariff.range})` : ''),
+    ];
     if (price.licenseFees?.length) {
       const lic = price.licenseFees
         .map((l) => `${formatEuros(l.amountCents)} de ${l.label}`)

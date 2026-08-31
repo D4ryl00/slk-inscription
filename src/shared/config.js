@@ -24,59 +24,46 @@ export const DISCIPLINES = {
 };
 
 /**
- * Membership offers = what is actually sold (mirrors the current campaign).
- * `priceAnnual` in euros (total amount for the season).
- * ⚠️ TO CONFIRM / COMPLETE: list and prices taken from the HelloAsso 2025-2026
- * screenshot; add a possible "Karaté seul" price if one exists.
+ * Membership offers = what is actually sold. ONE OFFER = ONE DISCIPLINE: the
+ * member picks what they want to practise, never an age category. The tariff is
+ * derived from their birthdate (cf. `tariffForAge` / `offerPriceAnnual`),
+ * because the club's classes and its prices do not split at the same age: the
+ * 14-17 train with the adults but still pay the youth rate.
  *
- * `ageRange` ({ min, max } in years, `null` = unbounded) mirrors the age bands
- * printed on the club's planning. It NEVER blocks a registration: it only feeds
- * the advisory notice in the form (cf. `offerAgeWarning`), because the office
- * has the final say on borderline cases.
- * The bands are a UNION over the offer's disciplines, not an intersection: the
+ * `priceAnnual` in euros, for the whole season. Either a flat number, or
+ * `{ youth, adult }` when the offer is age-banded.
+ *
+ * `minAge` mirrors the floor printed on the club's planning (karate opens at 6,
+ * the triathlon at 8). It NEVER blocks a registration: it only feeds the
+ * advisory notice in the form (cf. `offerMinAgeWarning`), because the office has
+ * the final say on borderline cases. There is no ceiling — every offer is open
+ * to any older member.
+ * The floor is a MINIMUM over the offer's disciplines, not a maximum: the
  * planning opens karate at 6 but the triathlon at 8, and there is no
  * "Karaté seul" offer, so a 6-year-old karateka has to buy the combined
- * formula. Warning at 8 there would flag a perfectly normal registration.
- * ⚠️ TO CONFIRM every season (the bands follow the planning).
+ * formula. A floor of 8 there would flag a perfectly normal registration.
+ * ⚠️ TO CONFIRM every season (prices and floors follow the planning).
  */
 export const OFFERS = [
   {
-    id: 'karate-mix-boxing-enfant',
-    label: 'Karaté Shidokan + Shidokan Triathlon — Enfant / Ado',
-    category: 'enfant',
+    id: 'karate-mix-boxing',
+    label: 'Karaté Shidokan + Shidokan Triathlon',
     disciplines: ['karate', 'mma', 'boxing'],
-    priceAnnual: 265,
-    ageRange: { min: 6, max: 13 }, // karaté 6-13 ∪ triathlon 8-13
+    priceAnnual: { youth: 265, adult: 330 },
+    minAge: 6, // karaté 6 ∪ triathlon 8
   },
   {
-    id: 'karate-mix-boxing-adulte',
-    label: 'Karaté Shidokan + Shidokan Triathlon — Adulte',
-    category: 'adulte',
-    disciplines: ['karate', 'mma', 'boxing'],
-    priceAnnual: 330,
-    ageRange: { min: 14, max: null },
-  },
-  {
-    id: 'mix-boxing-enfant',
-    label: 'Shidokan Triathlon — Enfant / Ado',
-    category: 'enfant',
+    id: 'mix-boxing',
+    label: 'Shidokan Triathlon',
     disciplines: ['mma', 'boxing'],
-    priceAnnual: 265,
-    ageRange: { min: 8, max: 13 },
+    priceAnnual: { youth: 265, adult: 280 },
+    minAge: 8,
   },
-  {
-    id: 'mix-boxing-adulte',
-    label: 'Shidokan Triathlon — Adulte',
-    category: 'adulte',
-    disciplines: ['mma', 'boxing'],
-    priceAnnual: 280,
-    ageRange: { min: 14, max: null },
-  },
-  // Cardio-Budo: the planning prints no age band → no `ageRange`, no warning.
+  // Cardio-Budo: the planning prints no age band → no `minAge`, no warning, and
+  // a single price per weekly session count.
   {
     id: 'cardio-1',
     label: 'Cardio Budo Kick-Boxing — 1 cours / semaine',
-    category: 'na',
     disciplines: ['cardio'],
     priceAnnual: 180,
     sessions: 1,
@@ -84,7 +71,6 @@ export const OFFERS = [
   {
     id: 'cardio-2',
     label: 'Cardio Budo Kick-Boxing — 2 cours / semaine',
-    category: 'na',
     disciplines: ['cardio'],
     priceAnnual: 265,
     sessions: 2,
@@ -92,12 +78,24 @@ export const OFFERS = [
   {
     id: 'cardio-3',
     label: 'Cardio Budo Kick-Boxing — 3 cours / semaine',
-    category: 'na',
     disciplines: ['cardio'],
     priceAnnual: 320,
     sessions: 3,
   },
 ];
+
+/**
+ * Offer ids sold in a previous season, mapped to the discipline offer that
+ * replaced them. `getOffer` resolves them, so a HelloAsso checkout opened just
+ * before the switch still finds its offer when its webhook comes back.
+ * Safe to drop once no pending checkout can reference them (a few days).
+ */
+export const OFFER_ID_ALIASES = {
+  'karate-mix-boxing-enfant': 'karate-mix-boxing',
+  'karate-mix-boxing-adulte': 'karate-mix-boxing',
+  'mix-boxing-enfant': 'mix-boxing',
+  'mix-boxing-adulte': 'mix-boxing',
+};
 
 /** Payment plans supported by the HelloAsso Checkout. */
 export const PAYMENT_PLANS = {
@@ -264,41 +262,68 @@ export function ageInSeason(birthdate, refDate = new Date()) {
   return seasonYear(refDate) - birth.year;
 }
 
-/** Human-readable age band: "6 à 13 ans", "14 ans et plus", "13 ans et moins". */
-function formatAgeRange({ min, max }) {
-  if (min != null && max != null) return `${min} à ${max} ans`;
-  if (min != null) return `${min} ans et plus`;
-  return `${max} ans et moins`;
+/**
+ * Tariff bands. The club charges a youth rate up to `YOUTH_TARIFF.maxAge`
+ * INCLUDED, and the adult rate above. It deliberately does NOT match the age at
+ * which members change class: the 14-17 already train with the adults, but the
+ * club keeps them on the youth rate.
+ * ⚠️ TO CONFIRM every season.
+ */
+export const YOUTH_TARIFF = { maxAge: 17 };
+
+/** Tariff bands, as shown to the member. */
+export const TARIFFS = {
+  youth: { key: 'youth', label: 'Enfant / Ado', range: "jusqu'à 17 ans" },
+  adult: { key: 'adult', label: 'Adulte', range: '18 ans et plus' },
+};
+
+/** Tariff band of a member aged `age` during the season; null if the age is unknown. */
+export function tariffForAge(age) {
+  if (age === null || age === undefined) return null;
+  return age <= YOUTH_TARIFF.maxAge ? 'youth' : 'adult';
+}
+
+/** True when the offer's price depends on the member's age. */
+export function offerIsAgeBanded(offer) {
+  return Boolean(offer) && typeof offer.priceAnnual === 'object';
 }
 
 /**
- * Advisory check: does the chosen offer match the member's age?
- * Returns null when it matches, when the offer has no age band (Cardio-Budo) or
- * when either input is missing — and a descriptive object otherwise.
+ * Annual price of `offer` in EUROS for a member aged `age` during the season.
+ * Returns null when the offer is age-banded and the age is unknown — the caller
+ * has to ask for the birthdate rather than guess a band.
+ */
+export function offerPriceAnnual(offer, age) {
+  if (!offer) return null;
+  if (!offerIsAgeBanded(offer)) return offer.priceAnnual;
+  const band = tariffForAge(age);
+  return band ? offer.priceAnnual[band] : null;
+}
+
+/**
+ * Advisory check: is the member below the age floor printed on the planning?
+ * Returns null when they are old enough, when the offer has no floor
+ * (Cardio-Budo) or when either input is missing — and a descriptive object
+ * otherwise. There is no upper bound: an offer is never "too young" for someone.
  *
  * This NEVER blocks the registration. The club wants the member to keep the
- * final say (a precocious kid, an adult training with the teens…), so the form
+ * final say (a precocious kid, a teen training with the adults…), so the form
  * only surfaces the mismatch as a notice.
  */
-export function offerAgeWarning(offerId, birthdate, refDate = new Date()) {
+export function offerMinAgeWarning(offerId, birthdate, refDate = new Date()) {
   const offer = getOffer(offerId);
-  if (!offer?.ageRange) return null;
+  if (offer?.minAge == null) return null;
   const age = ageInSeason(birthdate, refDate);
-  if (age === null) return null;
-
-  const { min, max } = offer.ageRange;
-  const tooYoung = min != null && age < min;
-  const tooOld = max != null && age > max;
-  if (!tooYoung && !tooOld) return null;
+  if (age === null || age >= offer.minAge) return null;
 
   const year = seasonYear(refDate);
   return {
     age,
     seasonYear: year,
-    range: offer.ageRange,
+    minAge: offer.minAge,
     message:
       `L'adhérent aura ${age} ans en ${year}, alors que la formule « ${offer.label} » ` +
-      `s'adresse aux ${formatAgeRange(offer.ageRange)}. ` +
+      `est ouverte à partir de ${offer.minAge} ans sur le planning. ` +
       `Vous pouvez tout de même poursuivre : le bureau du club validera l'inscription.`,
   };
 }
@@ -436,9 +461,10 @@ export const FORM_COLUMNS = [
 /** Days offered for Cardio Budo. */
 export const CARDIO_DAYS = ['Lundi', 'Vendredi', 'Samedi'];
 
-/** Utility: find an offer by its id. */
+/** Utility: find an offer by its id, resolving the ids of past seasons. */
 export function getOffer(offerId) {
-  return OFFERS.find((o) => o.id === offerId) || null;
+  const id = OFFER_ID_ALIASES[offerId] || offerId;
+  return OFFERS.find((o) => o.id === id) || null;
 }
 
 /** An offer is a "contact discipline" if any of its disciplines is. */

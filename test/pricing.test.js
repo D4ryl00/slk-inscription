@@ -5,18 +5,97 @@ import { AIDS, FORM_COLUMNS, familyIncrementalDiscount } from '../src/shared/con
 import { buildInstallments, computePrice } from '../src/shared/pricing.js';
 import { buildSheetRow } from '../src/shared/sheet-row.js';
 
+// Inside the 2026-2027 season, before the late-season discount opens (Nov 1st),
+// so the ages below stay stable whenever the suite is run.
+const AUG_2026 = new Date('2026-08-11T12:00:00Z');
+const ADULT = '1990-04-12'; // 36 in the 2026 season
+const CHILD = '2015-04-12'; // 11 in the 2026 season
+
 test('base price of an offer', () => {
-  const p = computePrice({ offerId: 'karate-mix-boxing-adulte', paymentPlan: '1x' });
+  const p = computePrice(
+    { offerId: 'karate-mix-boxing', paymentPlan: '1x', dateNaissance: ADULT },
+    AUG_2026,
+  );
   assert.equal(p.ok, true);
   assert.equal(p.totalCents, 33000); // 330 €
 });
 
+test('an age-banded offer cannot be priced without a birthdate', () => {
+  const p = computePrice({ offerId: 'karate-mix-boxing', paymentPlan: '1x' }, AUG_2026);
+  assert.equal(p.ok, false);
+  assert.match(p.error, /date de naissance/i);
+});
+
+test('the youth tariff applies below 18', () => {
+  const p = computePrice(
+    { offerId: 'karate-mix-boxing', paymentPlan: '1x', dateNaissance: CHILD },
+    AUG_2026,
+  );
+  assert.equal(p.ok, true);
+  assert.equal(p.tariff, 'youth');
+  assert.equal(p.baseCents, 26500); // 265 €
+});
+
+test('a teenager of 14 to 17 pays the youth tariff', () => {
+  // They train with the adults, but the club keeps them on the youth rate.
+  for (const age of [14, 15, 16, 17]) {
+    const p = computePrice(
+      { offerId: 'karate-mix-boxing', paymentPlan: '1x', dateNaissance: `${2026 - age}-09-30` },
+      AUG_2026,
+    );
+    assert.equal(p.ok, true, `age ${age}`);
+    assert.equal(p.tariff, 'youth', `age ${age}`);
+    assert.equal(p.totalCents, 26500, `age ${age}`);
+  }
+});
+
+test('the adult tariff starts at 18', () => {
+  const p = computePrice(
+    { offerId: 'karate-mix-boxing', paymentPlan: '1x', dateNaissance: '2008-12-31' },
+    AUG_2026,
+  );
+  assert.equal(p.tariff, 'adult');
+  assert.equal(p.totalCents, 33000);
+});
+
+test('the Shidokan Triathlon has its own adult price', () => {
+  const youth = computePrice(
+    { offerId: 'mix-boxing', paymentPlan: '1x', dateNaissance: CHILD },
+    AUG_2026,
+  );
+  const adult = computePrice(
+    { offerId: 'mix-boxing', paymentPlan: '1x', dateNaissance: ADULT },
+    AUG_2026,
+  );
+  assert.equal(youth.totalCents, 26500);
+  assert.equal(adult.totalCents, 28000);
+});
+
+test('Cardio-Budo prices without any birthdate, and has no tariff band', () => {
+  const p = computePrice({ offerId: 'cardio-1', paymentPlan: '1x' }, AUG_2026);
+  assert.equal(p.ok, true);
+  assert.equal(p.totalCents, 18000);
+  assert.equal(p.tariff, null);
+});
+
+test('a past-season offer id is still priced from the birthdate', () => {
+  // A checkout opened just before the switch comes back through the webhook.
+  const p = computePrice(
+    { offerId: 'karate-mix-boxing', paymentPlan: '1x', dateNaissance: ADULT },
+    AUG_2026,
+  );
+  assert.equal(p.ok, true);
+  assert.equal(p.offer.id, 'karate-mix-boxing');
+  assert.equal(p.totalCents, 33000); // the birthdate wins over the old id's category
+});
+
 test('aid deduction with code', () => {
   const p = computePrice({
-    offerId: 'karate-mix-boxing-adulte',
+    offerId: 'karate-mix-boxing',
     paymentPlan: '1x',
+    dateNaissance: ADULT,
     aid: { type: 'passsport', code: 'ABC123' },
-  });
+  }, AUG_2026);
   assert.equal(p.ok, true);
   assert.equal(p.totalCents, 33000 - AIDS.passsport.amount * 100);
   assert.equal(p.aidApplied.code, 'ABC123');
@@ -69,10 +148,11 @@ test('aid values: Pass\'Sport 50 €, PEPS 30 €', () => {
 
 test('offline payments: deducted from the card amount', () => {
   const p = computePrice({
-    offerId: 'karate-mix-boxing-adulte',
+    offerId: 'karate-mix-boxing',
     paymentPlan: '1x',
+    dateNaissance: ADULT,
     offlinePayments: [{ method: 'cheque', amount: 100 }, { method: 'especes', amount: 30 }],
-  });
+  }, AUG_2026);
   assert.equal(p.ok, true);
   assert.equal(p.totalCents, 33000);
   assert.equal(p.offlineTotalCents, 13000);
@@ -100,20 +180,22 @@ test('offline greater than total → error', () => {
 
 test('new-member fee: +6 € when nouvelAdherent = Oui', () => {
   const p = computePrice({
-    offerId: 'karate-mix-boxing-enfant',
+    offerId: 'karate-mix-boxing',
     paymentPlan: '1x',
+    dateNaissance: CHILD,
     nouvelAdherent: 'Oui',
-  });
+  }, AUG_2026);
   assert.equal(p.newMemberFeeCents, 600);
   assert.equal(p.totalCents, 26500 + 600);
 });
 
 test('new-member fee: not added for a renewal (Non)', () => {
   const p = computePrice({
-    offerId: 'karate-mix-boxing-enfant',
+    offerId: 'karate-mix-boxing',
     paymentPlan: '1x',
+    dateNaissance: CHILD,
     nouvelAdherent: 'Non',
-  });
+  }, AUG_2026);
   assert.equal(p.newMemberFeeCents, 0);
   assert.equal(p.totalCents, 26500);
 });
@@ -125,7 +207,10 @@ test('new-member fee: applies to any discipline (cardio)', () => {
 });
 
 test('licence breakdown: FFK 39 € + Shidokan 20 € on a karate offer', () => {
-  const p = computePrice({ offerId: 'karate-mix-boxing-adulte', paymentPlan: '1x' });
+  const p = computePrice(
+    { offerId: 'karate-mix-boxing', paymentPlan: '1x', dateNaissance: ADULT },
+    AUG_2026,
+  );
   const labels = p.licenseFees.map((l) => `${l.label}:${l.amountCents}`);
   assert.deepEqual(labels, ['licence FFK:3900', 'licence Shidokan:2000']);
 });
@@ -137,7 +222,10 @@ test('licence breakdown: Cardio-Budo has FFK only (no Shidokan)', () => {
 });
 
 test('licence fees are informational: they do not change the total', () => {
-  const p = computePrice({ offerId: 'karate-mix-boxing-adulte', paymentPlan: '1x' });
+  const p = computePrice(
+    { offerId: 'karate-mix-boxing', paymentPlan: '1x', dateNaissance: ADULT },
+    AUG_2026,
+  );
   assert.equal(p.totalCents, 33000); // still the base price, licences included in it
 });
 
@@ -200,7 +288,7 @@ test('late-season discount + new-member fee stack correctly', () => {
 
 test('buildSheetRow: no passeport columns anymore, "Nouvel adhérent" flags the fee', () => {
   const row = buildSheetRow(
-    { offerId: 'karate-mix-boxing-enfant', nouvelAdherent: 'Oui' },
+    { offerId: 'karate-mix-boxing', nouvelAdherent: 'Oui' },
     { netTotalCents: 27100 },
   );
   assert.equal(row.length, FORM_COLUMNS.length);
@@ -229,7 +317,7 @@ test('buildSheetRow: right number of columns and placement of key fields', () =>
     email: 'a@example.com', telephone: '0600000000',
     reseauxSociaux: 'Oui',
     contactConfiance: { prenom: 'Bob', nom: 'Martin', telephone: '0611111111' },
-    offerId: 'karate-mix-boxing-enfant',
+    offerId: 'karate-mix-boxing',
     reglementInterieur: true, rgpdConsent: true,
     aid: { type: 'passsport', code: 'PS-42' },
   };
