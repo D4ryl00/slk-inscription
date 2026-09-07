@@ -118,3 +118,31 @@ export function paymentCellMatches(cell, paymentId) {
   const words = String(cell ?? '').split(/\s+/);
   return words.some((w, i) => w === 'paiement' && words[i + 1] === id);
 }
+
+/** ISO date → `JJ/MM/AAAA`, or '' when there is no usable date. */
+function frenchDay(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso ?? ''));
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+}
+
+/**
+ * Adds one installment to a "Paiement en ligne" cell, on its own line.
+ * HelloAsso notifies each paid installment separately, months after the first —
+ * by then the submission blob is long gone, so the row is found back through the
+ * order id already written in the cell and we only append to what is there.
+ * Idempotent: a cell already mentioning this payment id comes back untouched, so
+ * a replayed notification writes nothing.
+ * @param {unknown} cell current cell content ('' for an empty cell)
+ * @param {{installmentNumber:number, amountCents:number, date?:string, paymentId:string|number}} p
+ * @returns {string} the cell content to write back
+ */
+export function appendInstallmentLine(cell, p) {
+  const current = String(cell ?? '');
+  if (paymentCellMatches(current, p.paymentId)) return current;
+  const day = frenchDay(p.date);
+  const line =
+    `Échéance ${p.installmentNumber} : ${formatEuros(p.amountCents || 0)}` +
+    (day ? ` le ${day}` : '') +
+    ` — paiement ${p.paymentId}`;
+  return current ? `${current}\n${line}` : line;
+}

@@ -6,10 +6,27 @@
 // storm of retries; the write only happens once the payment is confirmed.
 
 import { getStore } from '@netlify/blobs';
-import { extractPaymentReference, getCheckoutIntent, isCheckoutPaid } from './lib/helloasso.js';
-import { extractMemberId, isPaymentNotification, verifyHelloAssoSignature } from './lib/webhook-utils.js';
-import { appendRow, getColumnValues, uploadMemberPhoto } from './lib/google.js';
-import { PAIEMENT_COL_INDEX, buildSheetRow, paymentCellMatches } from '../../src/shared/sheet-row.js';
+import {
+  PAID_STATES,
+  extractPaymentReference,
+  getCheckoutIntent,
+  getPayment,
+  helloAssoEnv,
+  isCheckoutPaid,
+} from './lib/helloasso.js';
+import {
+  extractInstallmentRef,
+  extractMemberId,
+  isPaymentNotification,
+  verifyHelloAssoSignature,
+} from './lib/webhook-utils.js';
+import { appendRow, getColumnValues, updateCell, uploadMemberPhoto } from './lib/google.js';
+import {
+  PAIEMENT_COL_INDEX,
+  appendInstallmentLine,
+  buildSheetRow,
+  paymentCellMatches,
+} from '../../src/shared/sheet-row.js';
 
 export default async (req) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
@@ -43,18 +60,22 @@ export default async (req) => {
   // raced the Sheet write and recorded the member — and their photo — twice.
   if (!isPaymentNotification(payload)) return ack(`ignored event: ${payload?.eventType}`);
 
+  // The metadata is NOT guaranteed on the 2nd/3rd installment notifications, so a
+  // missing memberId is not a dead end — it falls through to the installment path.
   const memberId = extractMemberId(payload);
-  if (!memberId) return ack('notification without memberId (ignored)');
-
   const store = getStore('submissions');
-  let record;
-  try {
-    record = await store.get(memberId, { type: 'json' });
-  } catch (err) {
-    console.error('webhook: Blobs read', err);
-    return ack('storage read error');
+  let record = null;
+  if (memberId) {
+    try {
+      record = await store.get(memberId, { type: 'json' });
+    } catch (err) {
+      console.error('webhook: Blobs read', err);
+      return ack('storage read error');
+    }
   }
-  if (!record) return ack('no submission (already handled or expired)');
+  // No pending submission: either a later installment of a plan whose first
+  // payment was recorded months ago, or a notification already handled.
+  if (!record) return recordInstallment(payload);
 
   // --- Server-side verification: re-read the checkout-intent ------------------
   let intent;
@@ -118,6 +139,66 @@ export default async (req) => {
   await store.delete(memberId);
   return ack('member recorded');
 };
+
+/**
+ * Adds a later installment (2nd, 3rd…) to the member's existing row.
+ * By now the submission blob is gone, so nothing here may be taken from the
+ * webhook body — it is forgeable and, without a memberId to gate this path, the
+ * only thing an attacker controls is a sequential payment id. Every value written
+ * comes from the payment re-read through the API, whose organization we check.
+ * The member's row is found through the order id `buildSheetRow` already wrote in
+ * the cell, and a payment id already present means the notification is a replay.
+ */
+async function recordInstallment(payload) {
+  // Local guards first: a junk request must not cost us a single API call.
+  const ref = extractInstallmentRef(payload);
+  if (!ref) return ack('no submission (already handled or expired)');
+
+  let payment;
+  try {
+    payment = await getPayment(ref.paymentId);
+  } catch (err) {
+    console.error('webhook: installment verify', err);
+    return ack('installment verification unavailable');
+  }
+
+  const order = payment.order || {};
+  if (order.organizationSlug !== helloAssoEnv.ORG_SLUG) return ack('installment: foreign organization');
+  if (!PAID_STATES.includes(payment.state)) return ack('installment not collected');
+  const orderId = String(order.id ?? '');
+  if (!orderId) return ack('installment: payment without order');
+
+  let cells;
+  try {
+    cells = await getColumnValues(PAIEMENT_COL_INDEX);
+  } catch (err) {
+    console.error('webhook: installment Sheet read', err);
+    return ack('installment: Sheet read failed');
+  }
+
+  const index = cells.findIndex((c) => paymentCellMatches(c, orderId));
+  if (index === -1) {
+    console.error(`webhook: installment ${ref.installmentNumber} — no row for order ${orderId}`);
+    return ack('installment: member row not found');
+  }
+  const cell = cells[index];
+  if (paymentCellMatches(cell, String(payment.id))) return ack('installment already recorded');
+
+  const updated = appendInstallmentLine(cell, {
+    installmentNumber: payment.installmentNumber ?? ref.installmentNumber,
+    amountCents: payment.amount,
+    date: payment.date,
+    paymentId: payment.id,
+  });
+  try {
+    // getColumnValues reads from row 2, so the sheet row is the index plus two.
+    await updateCell(PAIEMENT_COL_INDEX, index + 2, updated);
+  } catch (err) {
+    console.error('webhook: installment Sheet write', err);
+    return ack('installment: Sheet write failed');
+  }
+  return ack(`installment ${payment.installmentNumber} recorded`);
+}
 
 function ack(msg) {
   console.log('webhook:', msg);

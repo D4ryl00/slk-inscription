@@ -12,11 +12,13 @@ import {
   isCheckoutPaid,
 } from '../netlify/functions/lib/helloasso.js';
 import {
+  extractInstallmentRef,
   extractMemberId,
   isPaymentNotification,
   verifyHelloAssoSignature,
 } from '../netlify/functions/lib/webhook-utils.js';
-import { paymentCellMatches } from '../src/shared/sheet-row.js';
+import { appendInstallmentLine, paymentCellMatches } from '../src/shared/sheet-row.js';
+import { formatEuros } from '../src/shared/pricing.js';
 
 // --- extractMemberId: notification format -------------------------------------
 
@@ -166,4 +168,80 @@ test('verifyHelloAssoSignature: missing signature or missing key → false', () 
 
 test('verifyHelloAssoSignature: different length → false (no exception)', () => {
   assert.equal(verifyHelloAssoSignature(SIG_BODY, 'deadbeef', SIG_KEY), false);
+});
+
+// --- appendInstallmentLine: 2nd/3rd installments land in the same cell --------
+
+// What the cell holds once the first payment has been recorded.
+const FIRST = `En ligne ${formatEuros(6000)} (CB 3x) — paiement 22707`;
+const SECOND = { installmentNumber: 2, amountCents: 2000, date: '2025-10-07T09:12:00+02:00', paymentId: '15223' };
+
+test('appendInstallmentLine: appends a line under the existing payment', () => {
+  assert.equal(
+    appendInstallmentLine(FIRST, SECOND),
+    `${FIRST}\nÉchéance 2 : ${formatEuros(2000)} le 07/10/2025 — paiement 15223`,
+  );
+});
+
+test('appendInstallmentLine: the same installment twice → unchanged (replay)', () => {
+  const once = appendInstallmentLine(FIRST, SECOND);
+  assert.equal(appendInstallmentLine(once, SECOND), once);
+});
+
+test('appendInstallmentLine: installments accumulate in order', () => {
+  const third = { installmentNumber: 3, amountCents: 2000, date: '2025-11-07T09:12:00+02:00', paymentId: '15224' };
+  const cell = appendInstallmentLine(appendInstallmentLine(FIRST, SECOND), third);
+  assert.equal(cell.split('\n').length, 3);
+  assert.match(cell, /Échéance 3 : .* le 07\/11\/2025 — paiement 15224$/);
+});
+
+test('appendInstallmentLine: empty cell → no leading blank line', () => {
+  assert.equal(
+    appendInstallmentLine('', SECOND),
+    `Échéance 2 : ${formatEuros(2000)} le 07/10/2025 — paiement 15223`,
+  );
+});
+
+test('appendInstallmentLine: unusable date → the line drops the date, not the payment', () => {
+  const line = appendInstallmentLine('', { ...SECOND, date: undefined });
+  assert.equal(line, `Échéance 2 : ${formatEuros(2000)} — paiement 15223`);
+});
+
+test('appendInstallmentLine: the appended id is found back by paymentCellMatches', () => {
+  // This is what makes the write idempotent AND keeps the row findable.
+  const cell = appendInstallmentLine(FIRST, SECOND);
+  assert.equal(paymentCellMatches(cell, '15223'), true);
+  assert.equal(paymentCellMatches(cell, '22707'), true);
+});
+
+// --- extractInstallmentRef: cheap guards, BEFORE any network call ------------
+
+test('extractInstallmentRef: a 2nd installment → its payment id and rank', () => {
+  const payload = { eventType: 'Payment', data: { id: 15223, installmentNumber: 2 } };
+  assert.deepEqual(extractInstallmentRef(payload), { paymentId: 15223, installmentNumber: 2 });
+});
+
+test('extractInstallmentRef: the first payment → null (the blob path owns it)', () => {
+  assert.equal(extractInstallmentRef({ eventType: 'Payment', data: { id: 1, installmentNumber: 1 } }), null);
+});
+
+test('extractInstallmentRef: absent or out-of-range rank → null', () => {
+  const at = (n) => extractInstallmentRef({ eventType: 'Payment', data: { id: 9, installmentNumber: n } });
+  assert.equal(at(undefined), null);
+  assert.equal(at(0), null);
+  assert.equal(at(13), null);
+  assert.equal(at(2.5), null);
+});
+
+test('extractInstallmentRef: unusable payment id → null', () => {
+  const withId = (id) => extractInstallmentRef({ eventType: 'Payment', data: { id, installmentNumber: 2 } });
+  assert.equal(withId(undefined), null);
+  assert.equal(withId(0), null);
+  assert.equal(withId(-3), null);
+  assert.equal(withId('abc'), null);
+});
+
+test('extractInstallmentRef: empty payload → null (no throw)', () => {
+  assert.equal(extractInstallmentRef({}), null);
+  assert.equal(extractInstallmentRef(null), null);
 });

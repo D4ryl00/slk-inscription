@@ -50,3 +50,20 @@ export function extractMemberId(payload) {
 export function isPaymentNotification(payload) {
   return payload?.eventType === 'Payment';
 }
+
+/**
+ * The payment reference of a LATER installment (2nd, 3rd…), or null.
+ * Runs before any network call, so a forged or irrelevant notification costs us
+ * nothing: the endpoint is public and this path — unlike the first-payment one —
+ * has no unguessable memberId to gate it.
+ * Rank 1 returns null on purpose: the first payment is the blob path's job.
+ * @returns {{paymentId:number, installmentNumber:number}|null}
+ */
+export function extractInstallmentRef(payload) {
+  const data = payload?.data || {};
+  const rank = data.installmentNumber;
+  const paymentId = data.id;
+  if (!Number.isInteger(rank) || rank < 2 || rank > 12) return null;
+  if (!Number.isInteger(paymentId) || paymentId <= 0) return null;
+  return { paymentId, installmentNumber: rank };
+}

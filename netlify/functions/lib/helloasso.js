@@ -123,6 +123,22 @@ export async function getCheckoutIntent(checkoutIntentId) {
   return res.json();
 }
 
+/**
+ * Reads ONE payment. Used to verify an installment notification: by then the
+ * submission blob is gone, so there is no checkoutIntentId to re-read and no
+ * memberId to trust — this is the only authoritative source left.
+ * ⚠️ A 403 here means "not yours" just as much as "privilege missing": HelloAsso
+ * hides foreign resources behind 403, never 404.
+ */
+export async function getPayment(paymentId) {
+  const token = await getAccessToken();
+  const res = await fetch(`${BASE}/v5/payments/${paymentId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw await apiError('payment read failed', res);
+  return res.json();
+}
+
 /** HelloAsso payment states considered as actually collected. */
 export const PAID_STATES = ['Authorized', 'Registered'];
 

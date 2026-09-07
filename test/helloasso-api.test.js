@@ -23,6 +23,7 @@ const {
   getCheckoutIntent,
   helloAssoEnv,
   helloAssoValidationMessage,
+  getPayment,
 } = await import('../netlify/functions/lib/helloasso.js');
 const { buildInstallments } = await import('../src/shared/pricing.js');
 
@@ -378,4 +379,38 @@ test('helloAssoValidationMessage: server-side failure → null (stays a generic 
 test('helloAssoValidationMessage: plain Error (network down) → null', () => {
   assert.equal(helloAssoValidationMessage(new Error('fetch failed')), null);
   assert.equal(helloAssoValidationMessage(null), null);
+});
+
+// ─── 5. GET /v5/payments/{paymentId} (installment verification) ───────────────
+
+test('getPayment: URL, method, Bearer header', async () => {
+  await withFetch(
+    () => jsonRes({ id: 15223, installmentNumber: 2 }),
+    async (m) => {
+      await getPayment(15223);
+      const call = m.apiCall();
+      assert.equal(call.url, `${BASE}/v5/payments/15223`);
+      assert.equal(call.options.method ?? 'GET', 'GET');
+      assert.equal(call.options.headers.Authorization, `Bearer ${TOKEN}`);
+    },
+  );
+});
+
+test('getPayment: returns the payment as sent by HelloAsso', async () => {
+  const payment = { id: 15223, amount: 2000, installmentNumber: 2, state: 'Authorized', order: { id: 22707 } };
+  await withFetch(
+    () => jsonRes(payment),
+    async () => assert.deepEqual(await getPayment(15223), payment),
+  );
+});
+
+test('getPayment: non-2xx → structured error (403 = not ours OR no privilege)', async () => {
+  await withFetch(
+    () => new Response('', { status: 403 }),
+    async () => {
+      const err = await getPayment(1).catch((e) => e);
+      assert.equal(err.status, 403);
+      assert.match(err.message, /payment read failed \(403\)/);
+    },
+  );
 });

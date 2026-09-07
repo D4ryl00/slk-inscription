@@ -125,6 +125,24 @@ export async function appendRow(values) {
 }
 
 /**
+ * Overwrites ONE cell, addressed by 0-based column index and 1-based sheet row.
+ * Used to append an installment to a member's payment cell: `append` would add a
+ * row, and we want to grow the text of the row that is already there.
+ * RAW so the `\n` between installments stays a real line break in the cell.
+ * @param {number} colIndex 0-based, as in FORM_COLUMNS
+ * @param {number} rowNumber 1-based, as displayed by the Sheet
+ */
+export async function updateCell(colIndex, rowNumber, value) {
+  const sheets = await getSheets();
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SHEET_ID,
+    range: `${quoteTab(TAB)}!${columnLetter(colIndex)}${rowNumber}`,
+    valueInputOption: 'RAW',
+    requestBody: { values: [[value]] },
+  });
+}
+
+/**
  * Fetches a column's values (by 0-based index) for deduplication.
  * @returns {Promise<string[]>}
  */
