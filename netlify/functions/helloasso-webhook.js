@@ -18,6 +18,7 @@ import {
   extractInstallmentRef,
   extractMemberId,
   isPaymentNotification,
+  summarizeNotification,
   verifyHelloAssoSignature,
 } from './lib/webhook-utils.js';
 import { appendRow, getColumnValues, updateCell, uploadMemberPhoto } from './lib/google.js';
@@ -55,6 +56,11 @@ export default async (req) => {
   } catch {
     return new Response('Invalid JSON', { status: 400 });
   }
+
+  // Logged for EVERY notification, Order included: this one line is what tells
+  // apart "HelloAsso sent two" from "we ran twice" the next time something looks
+  // duplicated. PII-free by construction.
+  console.log('webhook: notification', summarizeNotification(payload));
 
   // HelloAsso notifies the SAME checkout twice (Order + Payment). Acting on both
   // raced the Sheet write and recorded the member — and their photo — twice.

@@ -15,6 +15,7 @@ import {
   extractInstallmentRef,
   extractMemberId,
   isPaymentNotification,
+  summarizeNotification,
   verifyHelloAssoSignature,
 } from '../netlify/functions/lib/webhook-utils.js';
 import { appendInstallmentLine, paymentCellMatches } from '../src/shared/sheet-row.js';
@@ -244,4 +245,57 @@ test('extractInstallmentRef: unusable payment id → null', () => {
 test('extractInstallmentRef: empty payload → null (no throw)', () => {
   assert.equal(extractInstallmentRef({}), null);
   assert.equal(extractInstallmentRef(null), null);
+});
+
+// --- summarizeNotification: the one log line that answers plan §4b/§4c -------
+
+// A notification as HelloAsso documents it, personal data included.
+const NOTIF = {
+  eventType: 'Payment',
+  data: {
+    id: 15223,
+    amount: 2000,
+    installmentNumber: 2,
+    state: 'Authorized',
+    date: '2025-10-07T09:12:00+02:00',
+    order: { id: 22707 },
+    payer: { email: 'jean.dupont@example.com', firstName: 'Jean', lastName: 'Dupont' },
+  },
+  metadata: { memberId: 'abc-123', offerId: 'cardio-1' },
+};
+
+test('summarizeNotification: reports the fields plan §4c asks for', () => {
+  const s = summarizeNotification(NOTIF);
+  assert.match(s, /eventType=Payment/);
+  assert.match(s, /payment=15223/);
+  assert.match(s, /order=22707/);
+  assert.match(s, /installment=2/);
+  assert.match(s, /amount=2000/);
+});
+
+test('summarizeNotification: reports whether metadata survived (plan §4b)', () => {
+  assert.match(summarizeNotification(NOTIF), /metadata=yes memberId=yes/);
+  assert.match(summarizeNotification({ eventType: 'Payment', data: {} }), /metadata=no memberId=no/);
+  assert.match(
+    summarizeNotification({ eventType: 'Payment', data: {}, metadata: { offerId: 'x' } }),
+    /metadata=yes memberId=no/,
+  );
+});
+
+test('summarizeNotification: leaks NO personal data into the logs', () => {
+  const s = summarizeNotification(NOTIF);
+  for (const secret of ['jean.dupont@example.com', 'Jean', 'Dupont', 'abc-123']) {
+    assert.equal(s.includes(secret), false, `${secret} must not reach the logs`);
+  }
+});
+
+test('summarizeNotification: an Order notification is still readable', () => {
+  const s = summarizeNotification({ eventType: 'Order', data: { id: 22707 }, metadata: {} });
+  assert.match(s, /eventType=Order/);
+  assert.match(s, /installment=-/);
+});
+
+test('summarizeNotification: empty payload → no throw', () => {
+  assert.match(summarizeNotification(null), /eventType=-/);
+  assert.match(summarizeNotification({}), /eventType=-/);
 });

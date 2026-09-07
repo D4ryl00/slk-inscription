@@ -67,3 +67,29 @@ export function extractInstallmentRef(payload) {
   if (!Number.isInteger(paymentId) || paymentId <= 0) return null;
   return { paymentId, installmentNumber: rank };
 }
+
+/**
+ * One compact, PII-FREE line describing a notification, for the logs.
+ * The duplicate-member investigation cost days because the logs said only
+ * "member recorded" / "no submission": nothing showed that HelloAsso had sent two
+ * notifications, nor what a later installment actually carries. This is the line
+ * that would have answered it in minutes, so it stays in production.
+ * Names, emails and the memberId itself are deliberately NOT included — only
+ * whether they were there.
+ * @returns {string}
+ */
+export function summarizeNotification(payload) {
+  const d = payload?.data || {};
+  const metadata = payload?.metadata || payload?.data?.metadata;
+  const or = (v) => (v === undefined || v === null ? '-' : v);
+  return [
+    `eventType=${or(payload?.eventType)}`,
+    `payment=${or(d.id)}`,
+    `order=${or(d.order?.id)}`,
+    `installment=${or(d.installmentNumber)}`,
+    `amount=${or(d.amount)}`,
+    `state=${or(d.state)}`,
+    `metadata=${metadata ? 'yes' : 'no'}`,
+    `memberId=${metadata?.memberId ? 'yes' : 'no'}`,
+  ].join(' ');
+}
