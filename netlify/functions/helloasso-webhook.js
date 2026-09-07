@@ -7,7 +7,7 @@
 
 import { getStore } from '@netlify/blobs';
 import { extractPaymentReference, getCheckoutIntent, isCheckoutPaid } from './lib/helloasso.js';
-import { extractMemberId, verifyHelloAssoSignature } from './lib/webhook-utils.js';
+import { extractMemberId, isPaymentNotification, verifyHelloAssoSignature } from './lib/webhook-utils.js';
 import { appendRow, getColumnValues, uploadMemberPhoto } from './lib/google.js';
 import { PAIEMENT_COL_INDEX, buildSheetRow, paymentCellMatches } from '../../src/shared/sheet-row.js';
 
@@ -38,6 +38,10 @@ export default async (req) => {
   } catch {
     return new Response('Invalid JSON', { status: 400 });
   }
+
+  // HelloAsso notifies the SAME checkout twice (Order + Payment). Acting on both
+  // raced the Sheet write and recorded the member — and their photo — twice.
+  if (!isPaymentNotification(payload)) return ack(`ignored event: ${payload?.eventType}`);
 
   const memberId = extractMemberId(payload);
   if (!memberId) return ack('notification without memberId (ignored)');

@@ -11,7 +11,11 @@ import {
   extractPaymentReference,
   isCheckoutPaid,
 } from '../netlify/functions/lib/helloasso.js';
-import { extractMemberId, verifyHelloAssoSignature } from '../netlify/functions/lib/webhook-utils.js';
+import {
+  extractMemberId,
+  isPaymentNotification,
+  verifyHelloAssoSignature,
+} from '../netlify/functions/lib/webhook-utils.js';
 import { paymentCellMatches } from '../src/shared/sheet-row.js';
 
 // --- extractMemberId: notification format -------------------------------------
@@ -34,6 +38,30 @@ test('extractMemberId: absent or empty payload → null', () => {
   assert.equal(extractMemberId({ metadata: {} }), null);
   assert.equal(extractMemberId({}), null);
   assert.equal(extractMemberId(null), null);
+});
+
+// --- isPaymentNotification: only the Payment event may be acted upon ----------
+
+test('isPaymentNotification: eventType Payment → true', () => {
+  assert.equal(isPaymentNotification({ eventType: 'Payment', data: {} }), true);
+});
+
+test('isPaymentNotification: eventType Order → false (the duplicate source)', () => {
+  // HelloAsso sends BOTH Order and Payment for the same checkout; acting on both
+  // is what wrote the member twice.
+  assert.equal(isPaymentNotification({ eventType: 'Order', data: {} }), false);
+});
+
+test('isPaymentNotification: other documented event types → false', () => {
+  assert.equal(isPaymentNotification({ eventType: 'Form' }), false);
+  assert.equal(isPaymentNotification({ eventType: 'Organization' }), false);
+});
+
+test('isPaymentNotification: missing eventType or empty payload → false', () => {
+  assert.equal(isPaymentNotification({ data: {} }), false);
+  assert.equal(isPaymentNotification({}), false);
+  assert.equal(isPaymentNotification(null), false);
+  assert.equal(isPaymentNotification(undefined), false);
 });
 
 // --- isCheckoutPaid: payment states -------------------------------------------

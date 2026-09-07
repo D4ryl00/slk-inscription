@@ -35,3 +35,18 @@ export function extractMemberId(payload) {
   const metadata = payload?.metadata || payload?.data?.metadata || {};
   return metadata.memberId || null;
 }
+
+/**
+ * True if the notification is the one we may act upon.
+ * HelloAsso sends TWO notifications for a single checkout — `Order` (the order
+ * was created) and `Payment` (the money was taken) — plus one `Payment` per paid
+ * installment, all carrying the same `metadata`. Acting on both raced the Sheet
+ * write and recorded the member twice, so we keep `Payment` only.
+ * `Payment` rather than `Order` because the order notification can precede the
+ * Authorized/Registered state that isCheckoutPaid() requires, and no second
+ * `Order` would follow to catch the member up.
+ * @returns {boolean}
+ */
+export function isPaymentNotification(payload) {
+  return payload?.eventType === 'Payment';
+}
