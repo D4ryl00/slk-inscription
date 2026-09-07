@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test test/*.test.js",
-    "drive:token": "node scripts/get-drive-refresh-token.mjs"
+    "drive:token": "node scripts/get-drive-refresh-token.mjs",
+    "smoke:installment": "node scripts/smoke-installment.mjs"
   },
   "dependencies": {
     "@netlify/blobs": "^8.1.0",
