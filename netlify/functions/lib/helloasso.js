@@ -18,6 +18,34 @@ function assertConfig() {
   if (missing.length) throw new Error(`Missing HelloAsso config: ${missing.join(', ')}`);
 }
 
+/**
+ * An API call that came back non-2xx, with the pieces the CALLER needs to decide
+ * what to tell the user: a 400 is the member's own data being refused (and its
+ * `errors[]` explains why, in French), anything else is our problem or an outage.
+ * The message keeps the raw body, so nothing is lost from the logs.
+ */
+export class HelloAssoApiError extends Error {
+  constructor(message, status, errors) {
+    super(message);
+    this.name = 'HelloAssoApiError';
+    this.status = status;
+    this.errors = errors;
+  }
+}
+
+/** Builds a HelloAssoApiError from a failed response (reads the body once). */
+async function apiError(what, res) {
+  const body = await safeText(res);
+  let errors = [];
+  try {
+    const parsed = JSON.parse(body);
+    if (Array.isArray(parsed?.errors)) errors = parsed.errors;
+  } catch {
+    // Not JSON (HTML error page, empty body): the raw text stays in the message.
+  }
+  return new HelloAssoApiError(`${what} (${res.status}): ${body}`, res.status, errors);
+}
+
 /** Fetches an access token (client_credentials grant). */
 export async function getAccessToken() {
   assertConfig();
@@ -77,9 +105,7 @@ export async function createCheckoutIntent(p) {
     },
     body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    throw new Error(`checkout-intent creation failed (${res.status}): ${await safeText(res)}`);
-  }
+  if (!res.ok) throw await apiError('checkout-intent creation failed', res);
   return res.json();
 }
 
@@ -93,9 +119,7 @@ export async function getCheckoutIntent(checkoutIntentId) {
     `${BASE}/v5/organizations/${ORG_SLUG}/checkout-intents/${checkoutIntentId}`,
     { headers: { Authorization: `Bearer ${token}` } },
   );
-  if (!res.ok) {
-    throw new Error(`checkout-intent read failed (${res.status}): ${await safeText(res)}`);
-  }
+  if (!res.ok) throw await apiError('checkout-intent read failed', res);
   return res.json();
 }
 
@@ -121,6 +145,24 @@ export function extractPaymentReference(checkoutIntent) {
   if (!order) return null;
   const ref = order.id ?? order.payments?.[0]?.id;
   return ref != null ? String(ref) : null;
+}
+
+/**
+ * The message to show the MEMBER when HelloAsso refused their data, or null when
+ * the failure is not theirs to fix.
+ * Only a 400 qualifies: it means HelloAsso validated the payload and rejected it
+ * (e.g. "Votre prénom doit être différent de votre nom"), so telling the member to
+ * try again later — as we used to — leaves them stuck for good. Any other status
+ * is an outage or a bug on our side and stays generic.
+ * @param {unknown} err anything caught, not necessarily a HelloAssoApiError
+ * @returns {string|null} the refusal reason(s), already in French
+ */
+export function helloAssoValidationMessage(err) {
+  if (err?.status !== 400) return null;
+  const messages = (err.errors || [])
+    .map((e) => String(e?.message ?? '').trim())
+    .filter(Boolean);
+  return messages.length ? messages.join(' ; ') : null;
 }
 
 async function safeText(res) {

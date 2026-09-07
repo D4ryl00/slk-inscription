@@ -17,9 +17,13 @@ process.env.HELLOASSO_CLIENT_ID = 'test-client-id';
 process.env.HELLOASSO_CLIENT_SECRET = 'test-client-secret';
 process.env.HELLOASSO_ORG_SLUG = 'assoc-test';
 
-const { getAccessToken, createCheckoutIntent, getCheckoutIntent, helloAssoEnv } = await import(
-  '../netlify/functions/lib/helloasso.js'
-);
+const {
+  getAccessToken,
+  createCheckoutIntent,
+  getCheckoutIntent,
+  helloAssoEnv,
+  helloAssoValidationMessage,
+} = await import('../netlify/functions/lib/helloasso.js');
 const { buildInstallments } = await import('../src/shared/pricing.js');
 
 const BASE = 'https://api.helloasso-sandbox.com';
@@ -304,4 +308,74 @@ test('getCheckoutIntent: non-2xx response → throws', async () => {
       await assert.rejects(() => getCheckoutIntent(1), /checkout-intent read failed \(404\)/);
     },
   );
+});
+
+// ─── 4. Structured API errors (so the caller can tell 400 from a real outage) ──
+
+const REFUSED = {
+  errors: [{ code: 'ArgumentInvalid', message: 'Votre prénom doit être différent de votre nom' }],
+};
+
+test('createCheckoutIntent: 400 → error carries the status and the errors array', async () => {
+  await withFetch(
+    () => jsonRes(REFUSED, 400),
+    async () => {
+      const err = await createCheckoutIntent({ totalAmount: 1, payer: PAYER }).catch((e) => e);
+      assert.equal(err.status, 400);
+      assert.deepEqual(err.errors, REFUSED.errors);
+      // The log line must not lose anything it printed before.
+      assert.match(err.message, /checkout-intent creation failed \(400\)/);
+    },
+  );
+});
+
+test('createCheckoutIntent: 400 with a non-JSON body → empty errors, message kept', async () => {
+  await withFetch(
+    () => new Response('<html>gateway</html>', { status: 400 }),
+    async () => {
+      const err = await createCheckoutIntent({ totalAmount: 1, payer: PAYER }).catch((e) => e);
+      assert.equal(err.status, 400);
+      assert.deepEqual(err.errors, []);
+      assert.match(err.message, /gateway/);
+    },
+  );
+});
+
+test('getCheckoutIntent: non-2xx → same structured error', async () => {
+  await withFetch(
+    () => jsonRes({ errors: [{ message: 'Introuvable' }] }, 404),
+    async () => {
+      const err = await getCheckoutIntent(1).catch((e) => e);
+      assert.equal(err.status, 404);
+      assert.deepEqual(err.errors, [{ message: 'Introuvable' }]);
+    },
+  );
+});
+
+test('helloAssoValidationMessage: 400 with one message → that message', () => {
+  const err = Object.assign(new Error('x'), { status: 400, errors: REFUSED.errors });
+  assert.equal(helloAssoValidationMessage(err), 'Votre prénom doit être différent de votre nom');
+});
+
+test('helloAssoValidationMessage: several messages → joined', () => {
+  const err = Object.assign(new Error('x'), {
+    status: 400,
+    errors: [{ message: 'Premier souci' }, { message: 'Second souci' }],
+  });
+  assert.equal(helloAssoValidationMessage(err), 'Premier souci ; Second souci');
+});
+
+test('helloAssoValidationMessage: 400 without any message → null', () => {
+  const err = Object.assign(new Error('x'), { status: 400, errors: [{ code: 'Whatever' }] });
+  assert.equal(helloAssoValidationMessage(err), null);
+});
+
+test('helloAssoValidationMessage: server-side failure → null (stays a generic outage)', () => {
+  const err = Object.assign(new Error('x'), { status: 500, errors: [{ message: 'Oups' }] });
+  assert.equal(helloAssoValidationMessage(err), null);
+});
+
+test('helloAssoValidationMessage: plain Error (network down) → null', () => {
+  assert.equal(helloAssoValidationMessage(new Error('fetch failed')), null);
+  assert.equal(helloAssoValidationMessage(null), null);
 });

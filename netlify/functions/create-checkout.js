@@ -9,7 +9,7 @@ import { getStore } from '@netlify/blobs';
 import { buildInstallments, computePrice } from '../../src/shared/pricing.js';
 import { buildSheetRow } from '../../src/shared/sheet-row.js';
 import { appendRow, uploadMemberPhoto } from './lib/google.js';
-import { createCheckoutIntent } from './lib/helloasso.js';
+import { createCheckoutIntent, helloAssoValidationMessage } from './lib/helloasso.js';
 
 const REQUIRED = ['prenom', 'nom', 'email', 'dateNaissance', 'offerId', 'paymentPlan'];
 
@@ -99,6 +99,11 @@ export default async (req) => {
     });
   } catch (err) {
     console.error('create-checkout: HelloAsso', err);
+    // A 400 means HelloAsso read the payload and refused the MEMBER's own data
+    // (e.g. "Votre prénom doit être différent de votre nom"). Telling them to try
+    // again later leaves them stuck for good, so hand back the reason instead.
+    const refusal = helloAssoValidationMessage(err);
+    if (refusal) return json({ error: `HelloAsso a refusé la demande : ${refusal}` }, 400);
     return json({ error: 'Impossible de contacter HelloAsso. Réessayez plus tard.' }, 502);
   }
 
