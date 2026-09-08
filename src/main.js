@@ -17,6 +17,7 @@ import {
 } from './shared/config.js';
 import { OFFLINE_FIELD, centsToEuros, computePrice, formatEuros } from './shared/pricing.js';
 import { isMinorFromBirthdate, requiredDocuments } from './shared/docs.js';
+import { parsePastedBirthdate } from './birthdate.js';
 
 const $ = (sel) => document.querySelector(sel);
 const form = $('#form');
@@ -56,6 +57,20 @@ function updateOfferLabels(age) {
 }
 
 const ageWarningEl = $('#ageWarning');
+
+// --- Birthdate: accept a pasted date ----------------------------------------
+// The native field ignores a paste, so a date carried over from a message or a
+// spreadsheet has to be retyped. Only unambiguous text is taken (see
+// parsePastedBirthdate); anything else is left to the browser rather than
+// guessed, because a wrong birthdate here does not show up on the price.
+const birthdateInput = form.elements.dateNaissance;
+birthdateInput.addEventListener('paste', (e) => {
+  const iso = parsePastedBirthdate(e.clipboardData?.getData('text'));
+  if (!iso) return;
+  e.preventDefault();
+  birthdateInput.value = iso;
+  refresh(); // setting the value fires no 'input' event
+});
 
 // "Payer et m'inscrire" — the label to fall back on whenever no amount is known.
 const submitBtn = $('#submitBtn');
