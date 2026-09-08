@@ -6,3 +6,6 @@ dist/
 !.env.example
 *.log
 .DS_Store
+
+# Working notes, deliberately untracked
+docs/plan-corrections-helloasso.md
