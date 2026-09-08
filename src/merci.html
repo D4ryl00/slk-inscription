@@ -13,30 +13,44 @@
       <p id="lead">Votre adhésion au Stade Laurentin Karaté Shidokan est en cours de finalisation.
         Vous allez recevoir un reçu de paiement par email de la part de HelloAsso.</p>
 
+      <p id="orderRef" class="muted hidden">Référence de votre commande HelloAsso :
+        <strong id="orderNumber"></strong> — à rappeler si vous contactez le bureau du club.</p>
+
       <section class="card">
-        <h2>Dernière étape : rapporter vos pièces au bureau</h2>
-        <p class="muted">Selon votre situation :</p>
-        <ul class="docs">
-          <li><strong>Mineur</strong> — attestation sur l'honneur du responsable légal
-            (<a href="https://www.ffkarate.fr/wp-content/uploads/2024/08/Annexe-N%C2%B01-QUESTIONNAIRE-A-DESTINATION-DES-LICENCIES-MINEURS_vf_2.pdf" target="_blank" rel="noopener">document FFKarate</a>).</li>
-          <li><strong>Majeur</strong> — le certificat médical de non contre-indication est
-            obligatoire <strong>uniquement pour les compétiteurs</strong> (en loisir, aucun
-            certificat n'est requis). Pour combattre <strong>au KO</strong> (karaté Shidokan,
-            Shidokan Triathlon), il faut en plus un examen <strong>ophtalmologique (fond d'œil)</strong>
-            et un <strong>ECG</strong> de repos
-            (<a href="https://www.ffkarate.fr/wp-content/uploads/2025/12/Note-dinformation-Certificat-medical-saison-2025-2026-2.pdf" target="_blank" rel="noopener">note FFKarate</a>).</li>
-          <li><strong>Aide PEPS / Pass'Sport</strong> — apportez les justificatifs au bureau.</li>
-        </ul>
+        <h2>Dernière étape : passer au bureau du club</h2>
+        <!-- The exact list of documents was computed for this member at step 4 of the
+             form (requiredDocuments), from their age, offer and aid. Repeating a
+             hand-written summary here could only be partial — and being partial about
+             a licence file is worse than being general. -->
+        <p class="muted">Aucune pièce n'est à envoyer en ligne. Les documents demandés dépendent
+          de votre situation (âge, formule choisie, aide) : ils vous ont été indiqués dans le
+          formulaire, à l'étape « Pièces à rapporter au bureau ». Apportez-les au bureau du club,
+          qui vérifiera votre dossier avec vous.</p>
       </section>
 
       <a class="btn" href="./index.html">Inscrire un autre adhérent</a>
     </main>
     <script>
-      if (new URLSearchParams(location.search).get('offline') === '1') {
+      const params = new URLSearchParams(location.search);
+
+      if (params.get('offline') === '1') {
         document.getElementById('title').textContent = 'Merci, votre inscription est enregistrée !';
         document.getElementById('lead').textContent =
           'Vous avez choisi de régler au bureau. Votre adhésion est bien enregistrée ; pensez à ' +
           'apporter votre règlement (chèque, chèques vacances ou espèces) au bureau du club.';
+      }
+
+      // HelloAsso comes back with ?checkoutIntentId&code&orderId. The ORDER id is the
+      // one worth showing: it is what the club's register records ("commande <id>") and
+      // what appears on the HelloAsso receipt, so quoting it lets the office find the
+      // membership at once. The member id we put in the URL ourselves is internal, and
+      // the checkout intent id is a step, not a reference.
+      // It comes from the URL, so it is displayed only if it looks like an id, and as
+      // text — never as markup.
+      const orderId = params.get('orderId');
+      if (orderId && /^[0-9]{1,20}$/.test(orderId)) {
+        document.getElementById('orderNumber').textContent = orderId;
+        document.getElementById('orderRef').classList.remove('hidden');
       }
     </script>
   </body>
