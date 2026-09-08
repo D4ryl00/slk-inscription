@@ -69,10 +69,13 @@ export default async (req) => {
   // The metadata is NOT guaranteed on the 2nd/3rd installment notifications, so a
   // missing memberId is not a dead end — it falls through to the installment path.
   const memberId = extractMemberId(payload);
-  const store = getStore('submissions');
+  let store = null;
   let record = null;
   if (memberId) {
     try {
+      // Opened here and not before: the installment path below never touches the
+      // blob store, and must not fail when it is unavailable.
+      store = getStore('submissions');
       record = await store.get(memberId, { type: 'json' });
     } catch (err) {
       console.error('webhook: Blobs read', err);
