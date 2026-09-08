@@ -42,6 +42,12 @@ const env = (process.env.HELLOASSO_ENV || 'sandbox').toLowerCase();
 const BASE = env === 'prod' ? 'https://api.helloasso.com' : 'https://api.helloasso-sandbox.com';
 const ORG = process.env.HELLOASSO_ORG_SLUG;
 
+if (seed && env === 'prod') {
+  console.error('Refusing to seed in the prod environment: it would add a fake member to the');
+  console.error('real registry. Drop --seed, or point the environment at sandbox.');
+  process.exit(2);
+}
+
 console.log(`environment : ${env}${env === 'prod' ? '   ⚠️  PRODUCTION' : ''}`);
 console.log(`organization: ${ORG}`);
 console.log(`sheet       : ${process.env.GOOGLE_SHEET_ID}   ⟵ make sure this is the TEST sheet`);
