@@ -16,6 +16,10 @@ import {
   tariffForAge,
 } from './config.js';
 
+// Errors the front can attribute to a precise part of the form, to show them
+// where the amount was typed instead of only in the summary further down.
+export const OFFLINE_FIELD = 'offlinePayments';
+
 const toCents = (euros) => Math.round(euros * 100);
 export const centsToEuros = (c) => c / 100;
 export const formatEuros = (c) =>
@@ -34,7 +38,7 @@ export const formatEuros = (c) =>
  * @param {{method: string, amount: number}[]} [selection.offlinePayments] amounts (€) paid offline
  * @param {Date} [refDate=new Date()] reference date for the late-season proration
  * @returns {{
- *   ok: boolean, error?: string,
+ *   ok: boolean, error?: string, errorField?: 'offlinePayments',
  *   offer?: object, plan?: object, tariff?: 'youth'|'adult'|null,
  *   baseCents?: number, familyDiscountCents?: number, lateDiscountCents?: number,
  *   aidCents?: number, newMemberFeeCents?: number,
@@ -109,16 +113,24 @@ export function computePrice(selection, refDate = new Date()) {
   let offlineTotalCents = 0;
   for (const p of selection?.offlinePayments || []) {
     const method = PAYMENT_METHODS[p.method];
-    if (!method) return { ok: false, error: `Moyen de paiement inconnu : ${p.method}.` };
+    if (!method) {
+      return { ok: false, error: `Moyen de paiement inconnu : ${p.method}.`, errorField: OFFLINE_FIELD };
+    }
     const cents = Math.round((Number(p.amount) || 0) * 100);
-    if (cents < 0) return { ok: false, error: 'Un montant hors ligne est négatif.' };
+    if (cents < 0) {
+      return { ok: false, error: 'Un montant hors ligne est négatif.', errorField: OFFLINE_FIELD };
+    }
     if (cents > 0) {
       offlinePayments.push({ method: p.method, label: method.label, amountCents: cents });
       offlineTotalCents += cents;
     }
   }
   if (offlineTotalCents > totalCents) {
-    return { ok: false, error: 'Les règlements hors ligne dépassent le total dû.' };
+    return {
+      ok: false,
+      error: 'Les règlements hors ligne dépassent le total dû.',
+      errorField: OFFLINE_FIELD,
+    };
   }
   const cbAmountCents = totalCents - offlineTotalCents; // paid online (may be 0)
 

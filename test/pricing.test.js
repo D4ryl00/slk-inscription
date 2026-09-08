@@ -176,6 +176,8 @@ test('offline greater than total → error', () => {
     offlinePayments: [{ method: 'cheque', amount: 500 }],
   });
   assert.equal(p.ok, false);
+  // Tagged so the form can show the message under the amounts, not only in the summary.
+  assert.equal(p.errorField, 'offlinePayments');
 });
 
 test('new-member fee: +6 € when nouvelAdherent = Oui', () => {

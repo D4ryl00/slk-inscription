@@ -68,6 +68,18 @@ fieldset.inline input { width: auto; margin: 0; }
 .chip input { width: auto; margin: 0; }
 .chip:has(input:disabled) { opacity: 0.5; }
 
+/* "max" button tucked into the right of an amount field (offline payments) */
+.field-max { position: relative; display: block; margin-top: 4px; }
+.field-max input { margin-top: 0; padding-right: 60px; }
+.max-btn {
+  position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
+  padding: 4px 10px; font: inherit; font-size: 0.75rem; font-weight: 600;
+  color: var(--brand); background: #f1eefe; border: 1px solid #e5e0fa;
+  border-radius: 6px; cursor: pointer;
+}
+.max-btn:hover { background: #e5e0fa; }
+.max-btn:disabled { opacity: 0.5; cursor: default; }
+
 .check { display: flex; align-items: flex-start; gap: 8px; color: var(--ink); margin-bottom: 10px; }
 .check input { width: auto; margin: 3px 0 0; }
 
@@ -91,6 +103,7 @@ button[type="submit"]:disabled { opacity: 0.6; cursor: default; }
 
 .hint { color: var(--muted); font-size: 0.8rem; margin: 8px 0 0; }
 .error { color: var(--error); font-weight: 600; min-height: 1.2em; }
+#offlineError { margin: 6px 0 0; font-size: 0.85rem; }
 .hidden { display: none; }
 
 /* Highlighted note (e.g. HelloAsso contribution heads-up) */

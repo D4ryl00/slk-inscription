@@ -15,7 +15,7 @@ import {
   offerMinAgeWarning,
   offerPriceAnnual,
 } from './shared/config.js';
-import { computePrice, formatEuros } from './shared/pricing.js';
+import { OFFLINE_FIELD, centsToEuros, computePrice, formatEuros } from './shared/pricing.js';
 import { isMinorFromBirthdate, requiredDocuments } from './shared/docs.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -56,6 +56,10 @@ function updateOfferLabels(age) {
 }
 
 const ageWarningEl = $('#ageWarning');
+
+// "Payer et m'inscrire" — the label to fall back on whenever no amount is known.
+const submitBtn = $('#submitBtn');
+const SUBMIT_LABEL_DEFAULT = submitBtn.textContent;
 
 // --- Cardio-Budo days --------------------------------------------------------
 const cardioWrap = $('#cardioDaysWrap');
@@ -130,14 +134,40 @@ function updateRequiredMarks() {
 }
 
 // --- Offline payment methods (entered amounts) ------------------------------
+// Every amount carries a "max" button, right-aligned inside the field: a member
+// settling everything at the office should not have to compute the remainder
+// (and computePrice rejects an amount above the total anyway).
 const offlineMethodsWrap = $('#offlineMethods');
+const offlineInputs = new Map();
 for (const [key, m] of Object.entries(PAYMENT_METHODS)) {
   const label = document.createElement('label');
   label.innerHTML =
     `${m.label} (€)` +
-    `<input type="number" name="offline_${key}" min="0" step="0.01" placeholder="0" />`;
+    '<span class="field-max">' +
+    `<input type="number" name="offline_${key}" min="0" step="0.01" placeholder="0" />` +
+    `<button type="button" class="max-btn" data-offline-max="${key}" ` +
+    `title="Mettre le reste à payer" ` +
+    `aria-label="Mettre le reste à payer en ${m.label}">max</button>` +
+    '</span>';
   offlineMethodsWrap.appendChild(label);
+  offlineInputs.set(key, label.querySelector('input'));
 }
+const maxButtons = [...offlineMethodsWrap.querySelectorAll('.max-btn')];
+const offlineError = $('#offlineError');
+
+offlineMethodsWrap.addEventListener('click', (e) => {
+  const btn = e.target.closest('.max-btn');
+  if (!btn) return;
+  const key = btn.dataset.offlineMax;
+  const s = readForm();
+  // What is left once the OTHER methods are deducted: filling a field with the
+  // grand total would overshoot as soon as a second method carries an amount.
+  const price = priceOf(s, s.offlinePayments.filter((p) => p.method !== key));
+  if (!price.ok) return;
+  offlineInputs.get(key).value = centsToEuros(price.cbAmountCents).toFixed(2);
+  // A programmatic value change fires no 'input' event.
+  refresh();
+});
 
 function readOfflinePayments(fd) {
   const list = [];
@@ -197,6 +227,19 @@ function readForm() {
     rgpdConsent: fd.get('rgpdConsent') === 'on',
     engagementPieces: fd.get('engagementPieces') === 'on',
   };
+}
+
+/** Price of the current state, optionally with a different offline breakdown. */
+function priceOf(s, offlinePayments = s.offlinePayments) {
+  return computePrice({
+    offerId: s.offerId,
+    dateNaissance: s.dateNaissance,
+    paymentPlan: s.paymentPlan,
+    familyAlreadyRegistered: s.familyAlreadyRegistered,
+    nouvelAdherent: s.nouvelAdherent,
+    aid: s.aid,
+    offlinePayments,
+  });
 }
 
 // --- Dynamic update (price + documents + cardio days) -----------------------
@@ -263,19 +306,10 @@ function refresh() {
   });
 
   // Price
-  const price = computePrice({
-    offerId: s.offerId,
-    dateNaissance: s.dateNaissance,
-    paymentPlan: s.paymentPlan,
-    familyAlreadyRegistered: s.familyAlreadyRegistered,
-    nouvelAdherent: s.nouvelAdherent,
-    aid: s.aid,
-    offlinePayments: s.offlinePayments,
-  });
+  const price = priceOf(s);
   const totalEl = $('#priceTotal');
   const cbEl = $('#priceCb');
   const detail = $('#priceDetail');
-  const submitBtn = $('#submitBtn');
   const helloAssoNote = $('#helloAssoNote');
 
   if (!price.ok) {
@@ -283,6 +317,8 @@ function refresh() {
     cbEl.textContent = '—';
     detail.textContent = offer ? price.error : 'Sélectionnez une formule.';
     submitBtn.disabled = Boolean(offer); // block if an offer is chosen but the price is invalid
+    // Never keep advertising the last valid amount: the total now reads "—".
+    submitBtn.textContent = SUBMIT_LABEL_DEFAULT;
   } else {
     submitBtn.disabled = false;
     totalEl.textContent = formatEuros(price.totalCents);
@@ -318,6 +354,19 @@ function refresh() {
   // HelloAsso adds an optional contribution on its own payment page — flag it
   // only when there is actually an online card payment.
   helloAssoNote.classList.toggle('hidden', !(price.ok && price.cbAmountCents > 0));
+
+  // An amount typed here is wrong (over the total, negative): say so right under
+  // the fields, the summary further down is too far to be noticed while typing.
+  const offlineMsg = price.errorField === OFFLINE_FIELD ? price.error : '';
+  offlineError.textContent = offlineMsg;
+  offlineError.classList.toggle('hidden', !offlineMsg);
+
+  // A "max" button is usable as long as ITS own remainder can be computed —
+  // an overshoot elsewhere must not disable the very button that would fix it.
+  maxButtons.forEach((b) => {
+    const others = s.offlinePayments.filter((p) => p.method !== b.dataset.offlineMax);
+    b.disabled = !priceOf(s, others).ok;
+  });
 
   // Documents to bring
   const list = $('#docsList');
