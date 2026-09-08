@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { AIDS, FORM_COLUMNS, familyIncrementalDiscount } from '../src/shared/config.js';
-import { buildInstallments, computePrice } from '../src/shared/pricing.js';
-import { buildSheetRow } from '../src/shared/sheet-row.js';
+import { buildInstallments, computePrice, formatEuros } from '../src/shared/pricing.js';
+import { PAIEMENT_COL_INDEX, buildSheetRow, paymentCellMatches } from '../src/shared/sheet-row.js';
 
 // Inside the 2026-2027 season, before the late-season discount opens (Nov 1st),
 // so the ages below stay stable whenever the suite is run.
@@ -340,4 +340,59 @@ test('buildSheetRow: right number of columns and placement of key fields', () =>
   assert.equal(row[FORM_COLUMNS.indexOf("Aide Pass'Sport")].includes('PS-42'), true);
   // "office" columns NOT managed by the code (absent from FORM_COLUMNS)
   assert.equal(FORM_COLUMNS.includes('CERTIF MÉD'), false);
+});
+
+// --- "Paiement en ligne" cell: a plan must not read as fully collected ---------
+
+const cellOf = (pay) => buildSheetRow({ offerId: 'karate-mix-boxing' }, pay)[PAIEMENT_COL_INDEX];
+
+// Real 3x order observed in sandbox: 330 € total, 110 € taken on the first day.
+const PLAN_3X = {
+  onlineAmountCents: 33000,
+  onlinePlanLabel: 'CB 3x',
+  onlinePaymentId: '97011',
+  installments: 3,
+  firstInstallment: {
+    installmentNumber: 1, amountCents: 11000,
+    date: '2026-09-08T02:25:56+02:00', paymentId: '68157',
+  },
+};
+
+test('buildSheetRow: a single payment keeps the existing wording', () => {
+  assert.equal(
+    cellOf({ onlineAmountCents: 33000, onlinePlanLabel: 'CB 1x', onlinePaymentId: '97011', installments: 1 }),
+    `En ligne ${formatEuros(33000)} (CB 1x) — paiement 97011`,
+  );
+});
+
+test('buildSheetRow: a 3x announces the PLANNED total, not a collected one', () => {
+  const [summary] = cellOf(PLAN_3X).split('\n');
+  assert.equal(summary, `Prévu ${formatEuros(33000)} en 3× — commande 97011`);
+  // "En ligne 330,00 €" would claim the whole plan was cashed on day one.
+  assert.equal(summary.includes('En ligne'), false);
+});
+
+test('buildSheetRow: a 3x records its first installment straight away', () => {
+  assert.equal(
+    cellOf(PLAN_3X),
+    `Prévu ${formatEuros(33000)} en 3× — commande 97011\n`
+      + `Échéance 1 : ${formatEuros(11000)} le 08/09/2026 — paiement 68157`,
+  );
+});
+
+test('buildSheetRow: the 3x cell stays findable by order AND by payment', () => {
+  // The order id is what the dedup and the installment lookup search on; the
+  // payment id is what stops the first installment being written twice.
+  const cell = cellOf(PLAN_3X);
+  assert.equal(paymentCellMatches(cell, '97011'), true);
+  assert.equal(paymentCellMatches(cell, '68157'), true);
+});
+
+test('buildSheetRow: a 3x with no installment detail still writes the summary', () => {
+  const { firstInstallment, ...withoutDetail } = PLAN_3X;
+  assert.equal(cellOf(withoutDetail), `Prévu ${formatEuros(33000)} en 3× — commande 97011`);
+});
+
+test('buildSheetRow: nothing paid online is unaffected', () => {
+  assert.equal(cellOf({ onlineAmountCents: 0, installments: 3 }), 'Aucun paiement en ligne');
 });

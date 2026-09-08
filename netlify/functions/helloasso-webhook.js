@@ -8,6 +8,7 @@
 import { getStore } from '@netlify/blobs';
 import {
   PAID_STATES,
+  extractCollectedInstallment,
   extractPaymentReference,
   getCheckoutIntent,
   getPayment,
@@ -22,6 +23,7 @@ import {
   verifyHelloAssoSignature,
 } from './lib/webhook-utils.js';
 import { appendRow, getColumnValues, updateCell, uploadMemberPhoto } from './lib/google.js';
+import { PAYMENT_PLANS } from '../../src/shared/config.js';
 import {
   PAIEMENT_COL_INDEX,
   appendInstallmentLine,
@@ -135,6 +137,10 @@ export default async (req) => {
     familyDiscountCents: record.price.familyDiscountCents || 0,
     lateDiscountCents: record.price.lateDiscountCents || 0,
     photoUrl,
+    // With a plan, only the first installment has been taken: the row must say
+    // what arrived, not what is owed over the next months.
+    installments: PAYMENT_PLANS[record.submission?.paymentPlan]?.installments || 1,
+    firstInstallment: extractCollectedInstallment(intent),
   };
 
   try {

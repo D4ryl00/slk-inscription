@@ -12,7 +12,8 @@ const oui = (b) => (b ? 'Oui' : 'Non');
  * @param {object} pay payment summary:
  *   { date, netTotalCents, onlineAmountCents, onlinePaymentId, onlinePlanLabel,
  *     offlinePayments:[{label,amountCents}], offlineTotalCents, familyDiscountCents,
- *     lateDiscountCents, photoUrl }
+ *     lateDiscountCents, photoUrl,
+ *     installments, firstInstallment:{installmentNumber,amountCents,date,paymentId} }
  * @returns {(string|number)[]} exactly FORM_COLUMNS.length values
  */
 export function buildSheetRow(s, pay) {
@@ -38,12 +39,26 @@ export function buildSheetRow(s, pay) {
     formatEuros(p.netTotalCents || 0) +
     (discountNotes.length ? ` (${discountNotes.join(', ')} incluse${discountNotes.length > 1 ? 's' : ''})` : '');
 
-  // Amount actually paid online.
-  const paiementCell =
-    p.onlineAmountCents > 0
-      ? `En ligne ${formatEuros(p.onlineAmountCents)} (${p.onlinePlanLabel || 'CB'})` +
-        (p.onlinePaymentId ? ` — paiement ${p.onlinePaymentId}` : '')
-      : 'Aucun paiement en ligne';
+  // Amount paid online. With an installment plan the online amount is what is
+  // PLANNED, not what has been taken — only the first installment has arrived — so
+  // the wording says so, and each installment is then listed on its own line as it
+  // is collected. "En ligne 330,00 €" on day one had the office read a 3x as fully
+  // collected for two months.
+  const installments = p.installments || 1;
+  let paiementCell;
+  if (!(p.onlineAmountCents > 0)) {
+    paiementCell = 'Aucun paiement en ligne';
+  } else if (installments > 1) {
+    paiementCell =
+      `Prévu ${formatEuros(p.onlineAmountCents)} en ${installments}×` +
+      (p.onlinePaymentId ? ` — commande ${p.onlinePaymentId}` : '');
+  } else {
+    paiementCell =
+      `En ligne ${formatEuros(p.onlineAmountCents)} (${p.onlinePlanLabel || 'CB'})` +
+      (p.onlinePaymentId ? ` — paiement ${p.onlinePaymentId}` : '');
+  }
+  // Same helper as the later installments, so the lines cannot drift apart.
+  if (p.firstInstallment) paiementCell = appendInstallmentLine(paiementCell, p.firstInstallment);
 
   // Breakdown of offline payments (to be collected at the office).
   const horsLigneCell = offline.length
@@ -102,12 +117,18 @@ export function buildSheetRow(s, pay) {
 /** Index (0-based) of the "Paiement en ligne" column, for deduplication. */
 export const PAIEMENT_COL_INDEX = FORM_COLUMNS.indexOf('Paiement en ligne');
 
+/** Words a reference can follow in the cell: an order (3x summary) or a payment. */
+const REFERENCE_WORDS = new Set(['paiement', 'commande']);
+
 /**
- * True if a "Paiement en ligne" cell records EXACTLY this payment reference.
- * The cell ends with `— paiement <id>` (cf. paiementCell above): we require the
- * word `paiement` immediately followed by the full id. A substring test would
- * false-positive on a prefix (id "123" vs cell "… paiement 1234") and make the
- * webhook drop a paid member as "already recorded".
+ * True if a "Paiement en ligne" cell records EXACTLY this reference.
+ * References appear as `— paiement <id>` or, on the summary line of an installment
+ * plan, `— commande <id>` (cf. paiementCell above): we require one of those words
+ * immediately followed by the full id. A substring test would false-positive on a
+ * prefix (id "123" vs cell "… paiement 1234") and make the webhook drop a paid
+ * member as "already recorded".
+ * This is the key BOTH the deduplication and the installment row lookup search on,
+ * so it must keep matching rows written before the 3x wording existed.
  * @param {unknown} cell value read from the Sheet
  * @param {string} paymentId reference to look for
  * @returns {boolean}
@@ -116,7 +137,7 @@ export function paymentCellMatches(cell, paymentId) {
   if (!paymentId) return false;
   const id = String(paymentId);
   const words = String(cell ?? '').split(/\s+/);
-  return words.some((w, i) => w === 'paiement' && words[i + 1] === id);
+  return words.some((w, i) => REFERENCE_WORDS.has(w) && words[i + 1] === id);
 }
 
 /** ISO date → `JJ/MM/AAAA`, or '' when there is no usable date. */

@@ -153,6 +153,28 @@ export function isCheckoutPaid(checkoutIntent) {
 }
 
 /**
+ * The installment ALREADY COLLECTED on a checkout-intent, or null.
+ * An installment plan creates all of its payments up front — the later ones sit
+ * in `Pending` until their date — so the order total says nothing about what has
+ * actually been taken. This picks the earliest payment in a collected state, which
+ * at first-payment time is installment 1, so the row can state what really arrived.
+ * @returns {{installmentNumber:number, amountCents:number, date:string, paymentId:number}|null}
+ */
+export function extractCollectedInstallment(checkoutIntent) {
+  const collected = (checkoutIntent?.order?.payments || [])
+    .filter((p) => PAID_STATES.includes(p.state))
+    .sort((a, b) => (a.installmentNumber ?? 1) - (b.installmentNumber ?? 1));
+  const first = collected[0];
+  if (!first) return null;
+  return {
+    installmentNumber: first.installmentNumber ?? 1,
+    amountCents: first.amount,
+    date: first.date,
+    paymentId: first.id,
+  };
+}
+
+/**
  * Payment reference for deduplication: order id preferably, otherwise the first
  * payment id. Returns a string, or null if there is no order.
  */

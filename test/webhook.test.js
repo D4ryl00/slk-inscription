@@ -8,6 +8,7 @@ import { test } from 'node:test';
 
 import {
   PAID_STATES,
+  extractCollectedInstallment,
   extractPaymentReference,
   isCheckoutPaid,
 } from '../netlify/functions/lib/helloasso.js';
@@ -133,6 +134,18 @@ test('paymentCellMatches: prefix/suffix/substring of another id → false', () =
 test('paymentCellMatches: id must follow the word "paiement" (not an amount)', () => {
   assert.equal(paymentCellMatches('En ligne 1 234,00 € (CB 3x) — paiement 9', '1'), false);
   assert.equal(paymentCellMatches('En ligne 1 234,00 € (CB 3x) — paiement 9', '9'), true);
+});
+
+test('paymentCellMatches: an order reference counts too (3x summary line)', () => {
+  // A 3x row leads with "— commande <orderId>", but the order id is still the key
+  // the dedup and the installment lookup search for.
+  const cell = 'Prévu 330,00 € en 3× — commande 97011';
+  assert.equal(paymentCellMatches(cell, '97011'), true);
+  assert.equal(paymentCellMatches(cell, '9701'), false);
+});
+
+test('paymentCellMatches: rows written before the 3x wording still match', () => {
+  assert.equal(paymentCellMatches('En ligne 330,00 € (CB 3x) — paiement 97011', '97011'), true);
 });
 
 test('paymentCellMatches: cell without payment, empty cell or empty id → false', () => {
@@ -327,4 +340,52 @@ test('summarizeNotification: a Payment notification reports both ids', () => {
 test('summarizeNotification: empty payload → no throw', () => {
   assert.match(summarizeNotification(null), /eventType=-/);
   assert.match(summarizeNotification({}), /eventType=-/);
+});
+
+// --- extractCollectedInstallment: what the first webhook can already record ---
+
+// The real shape of order 97011 the day it was paid: all three installments are
+// created up front, only the first one is collected.
+const INTENT_3X = {
+  order: {
+    id: 97011,
+    payments: [
+      { id: 68157, installmentNumber: 1, amount: 11000, state: 'Authorized', date: '2026-09-08T02:25:56+02:00' },
+      { id: 68158, installmentNumber: 2, amount: 11000, state: 'Pending', date: '2026-10-08T00:00:00+02:00' },
+      { id: 68159, installmentNumber: 3, amount: 11000, state: 'Pending', date: '2026-11-08T00:00:00+01:00' },
+    ],
+  },
+};
+
+test('extractCollectedInstallment: returns the collected installment, not the plan', () => {
+  assert.deepEqual(extractCollectedInstallment(INTENT_3X), {
+    installmentNumber: 1,
+    amountCents: 11000,
+    date: '2026-09-08T02:25:56+02:00',
+    paymentId: 68157,
+  });
+});
+
+test('extractCollectedInstallment: ignores the installments still pending', () => {
+  const pendingOnly = { order: { payments: INTENT_3X.order.payments.slice(1) } };
+  assert.equal(extractCollectedInstallment(pendingOnly), null);
+});
+
+test('extractCollectedInstallment: Registered counts as collected too', () => {
+  const registered = { order: { payments: [{ id: 7, installmentNumber: 1, amount: 100, state: 'Registered' }] } };
+  assert.equal(extractCollectedInstallment(registered).paymentId, 7);
+});
+
+test('extractCollectedInstallment: several collected → the earliest rank', () => {
+  const two = { order: { payments: [
+    { id: 9, installmentNumber: 2, amount: 100, state: 'Authorized' },
+    { id: 8, installmentNumber: 1, amount: 100, state: 'Authorized' },
+  ] } };
+  assert.equal(extractCollectedInstallment(two).paymentId, 8);
+});
+
+test('extractCollectedInstallment: no order or no payment → null', () => {
+  assert.equal(extractCollectedInstallment({ order: {} }), null);
+  assert.equal(extractCollectedInstallment({}), null);
+  assert.equal(extractCollectedInstallment(null), null);
 });
