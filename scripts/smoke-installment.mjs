@@ -8,9 +8,15 @@
 // organization exercises the whole path: API verification, organization check,
 // row lookup, append, cell write.
 //
-//   npm run smoke:installment                 # list payments, do nothing
-//   npm run smoke:installment -- --yes        # send, using the newest payment
+//   npm run smoke:installment                  # list payments, do nothing
+//   npm run smoke:installment -- --yes         # send, using the newest payment
+//   npm run smoke:installment -- --yes --seed  # add a member row FIRST, then send
 //   npm run smoke:installment -- --yes --payment 64747 --url https://…/api/helloasso-webhook
+//
+// --seed exists because the installment path only ever APPENDS to an existing
+// member row — it never creates one. On a fresh test sheet the only reachable
+// outcome is "member row not found", so --seed writes a throwaway member whose
+// payment cell references the chosen order, making the append observable.
 //
 // Expected outcomes, both of them a pass:
 //   "installment: member row not found"  → the payment's order is not in the Sheet.
@@ -29,6 +35,7 @@ const arg = (name, fallback) => {
   return i !== -1 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
 };
 const confirmed = process.argv.includes('--yes');
+const seed = process.argv.includes('--seed');
 const target = arg('url', 'http://localhost:8888/api/helloasso-webhook');
 
 const env = (process.env.HELLOASSO_ENV || 'sandbox').toLowerCase();
@@ -75,8 +82,26 @@ const chosen = arg('payment')
 console.log(`\nchosen payment: ${chosen.id} (order ${chosen.order?.id ?? '?'})`);
 
 if (!confirmed) {
-  console.log('\nDry run. Re-run with --yes to POST the notification.');
+  console.log('\nDry run. Re-run with --yes to POST the notification (add --seed to plant a row first).');
   process.exit(0);
+}
+
+if (seed) {
+  const { appendRow } = await import('../netlify/functions/lib/google.js');
+  const { buildSheetRow } = await import('../src/shared/sheet-row.js');
+  await appendRow(
+    buildSheetRow(
+      { prenom: 'Smoke', nom: 'Test', email: 'smoke@example.invalid', offerId: 'smoke-test' },
+      {
+        date: new Date().toISOString(),
+        netTotalCents: chosen.amount,
+        onlineAmountCents: chosen.amount,
+        onlinePaymentId: String(chosen.order?.id ?? ''),
+        onlinePlanLabel: 'CB 3x',
+      },
+    ),
+  );
+  console.log(`seeded a "Smoke Test" row referencing order ${chosen.order?.id} — delete it afterwards`);
 }
 
 // installmentNumber is forged: it only has to clear extractInstallmentRef. The
