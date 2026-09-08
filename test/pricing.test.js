@@ -358,11 +358,34 @@ const PLAN_3X = {
   },
 };
 
-test('buildSheetRow: a single payment keeps the existing wording', () => {
-  assert.equal(
-    cellOf({ onlineAmountCents: 33000, onlinePlanLabel: 'CB 1x', onlinePaymentId: '97011', installments: 1 }),
-    `En ligne ${formatEuros(33000)} (CB 1x) — paiement 97011`,
-  );
+// The webhook ALWAYS supplies firstInstallment, single payment included — the
+// earlier test omitted it and so exercised a case production never produces.
+const PLAN_1X = {
+  onlineAmountCents: 33000,
+  onlinePlanLabel: 'CB 1x',
+  onlinePaymentId: '97013',
+  installments: 1,
+  firstInstallment: {
+    installmentNumber: 1, amountCents: 33000,
+    date: '2026-09-08T02:59:16+02:00', paymentId: '68163',
+  },
+};
+
+test('buildSheetRow: a single payment is one line, not an "Échéance 1" repeat', () => {
+  assert.equal(cellOf(PLAN_1X), `En ligne ${formatEuros(33000)} (CB 1x) — commande 97013`);
+});
+
+test('buildSheetRow: the summary reference is labelled as the order it is', () => {
+  // 97013 is an order id. Calling it "paiement" put it next to a real payment id
+  // under the same word, which is what a reader of the sheet tripped over.
+  for (const cell of [cellOf(PLAN_1X), cellOf(PLAN_3X)]) {
+    assert.match(cell.split('\n')[0], /— commande 97/);
+    assert.equal(cell.split('\n')[0].includes('paiement'), false);
+  }
+});
+
+test('buildSheetRow: a single payment row stays findable by its order id', () => {
+  assert.equal(paymentCellMatches(cellOf(PLAN_1X), '97013'), true);
 });
 
 test('buildSheetRow: a 3x announces the PLANNED total, not a collected one', () => {

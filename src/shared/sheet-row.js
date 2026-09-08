@@ -44,21 +44,25 @@ export function buildSheetRow(s, pay) {
   // the wording says so, and each installment is then listed on its own line as it
   // is collected. "En ligne 330,00 €" on day one had the office read a 3x as fully
   // collected for two months.
+  // `onlinePaymentId` is the ORDER reference (cf. extractPaymentReference), so it
+  // is labelled as one. Calling it "paiement" put it under the same word as the
+  // real payment ids on the installment lines, for two different numbers.
   const installments = p.installments || 1;
+  const ref = p.onlinePaymentId ? ` — commande ${p.onlinePaymentId}` : '';
   let paiementCell;
   if (!(p.onlineAmountCents > 0)) {
     paiementCell = 'Aucun paiement en ligne';
   } else if (installments > 1) {
-    paiementCell =
-      `Prévu ${formatEuros(p.onlineAmountCents)} en ${installments}×` +
-      (p.onlinePaymentId ? ` — commande ${p.onlinePaymentId}` : '');
+    paiementCell = `Prévu ${formatEuros(p.onlineAmountCents)} en ${installments}×${ref}`;
   } else {
-    paiementCell =
-      `En ligne ${formatEuros(p.onlineAmountCents)} (${p.onlinePlanLabel || 'CB'})` +
-      (p.onlinePaymentId ? ` — paiement ${p.onlinePaymentId}` : '');
+    paiementCell = `En ligne ${formatEuros(p.onlineAmountCents)} (${p.onlinePlanLabel || 'CB'})${ref}`;
   }
+  // Only a plan gets per-installment lines: on a single payment "Échéance 1" would
+  // just repeat the line above it, for the same amount on the same day.
   // Same helper as the later installments, so the lines cannot drift apart.
-  if (p.firstInstallment) paiementCell = appendInstallmentLine(paiementCell, p.firstInstallment);
+  if (installments > 1 && p.firstInstallment) {
+    paiementCell = appendInstallmentLine(paiementCell, p.firstInstallment);
+  }
 
   // Breakdown of offline payments (to be collected at the office).
   const horsLigneCell = offline.length
