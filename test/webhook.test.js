@@ -289,10 +289,39 @@ test('summarizeNotification: leaks NO personal data into the logs', () => {
   }
 });
 
-test('summarizeNotification: an Order notification is still readable', () => {
-  const s = summarizeNotification({ eventType: 'Order', data: { id: 22707 }, metadata: {} });
+// Both payloads below are the REAL ones observed in sandbox on 2026-09-08 for a
+// single 3x checkout — the two notifications HelloAsso sends for one order.
+
+test('summarizeNotification: an Order notification reports the ORDER id, not a payment', () => {
+  // On an Order notification `data` IS the order, so data.id is the order id.
+  // Labelling it payment= sent the reader chasing a payment that does not exist.
+  const s = summarizeNotification({
+    eventType: 'Order',
+    data: { id: 97011, amount: { total: 33000, vat: 0, discount: 0 } },
+    metadata: { memberId: 'x' },
+  });
   assert.match(s, /eventType=Order/);
+  assert.match(s, /payment=-/);
+  assert.match(s, /order=97011/);
   assert.match(s, /installment=-/);
+});
+
+test('summarizeNotification: an order amount object logs its total, not [object Object]', () => {
+  const s = summarizeNotification({ eventType: 'Order', data: { id: 97011, amount: { total: 33000 } } });
+  assert.match(s, /amount=33000/);
+  assert.equal(s.includes('[object Object]'), false);
+});
+
+test('summarizeNotification: a Payment notification reports both ids', () => {
+  const s = summarizeNotification({
+    eventType: 'Payment',
+    data: { id: 68157, order: { id: 97011 }, installmentNumber: 1, amount: 11000, state: 'Authorized' },
+    metadata: { memberId: 'x' },
+  });
+  assert.match(s, /payment=68157/);
+  assert.match(s, /order=97011/);
+  assert.match(s, /installment=1/);
+  assert.match(s, /amount=11000/);
 });
 
 test('summarizeNotification: empty payload → no throw', () => {

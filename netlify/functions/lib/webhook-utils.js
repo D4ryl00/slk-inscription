@@ -82,12 +82,17 @@ export function summarizeNotification(payload) {
   const d = payload?.data || {};
   const metadata = payload?.metadata || payload?.data?.metadata;
   const or = (v) => (v === undefined || v === null ? '-' : v);
+  // On an Order notification `data` IS the order, so data.id is the order id and
+  // there is no payment to report; on a Payment one, data.id is the payment.
+  const isOrder = payload?.eventType === 'Order';
+  // An order's amount is { total, vat, discount }; a payment's is an integer.
+  const amount = d.amount && typeof d.amount === 'object' ? d.amount.total : d.amount;
   return [
     `eventType=${or(payload?.eventType)}`,
-    `payment=${or(d.id)}`,
-    `order=${or(d.order?.id)}`,
+    `payment=${isOrder ? '-' : or(d.id)}`,
+    `order=${or(d.order?.id ?? (isOrder ? d.id : undefined))}`,
     `installment=${or(d.installmentNumber)}`,
-    `amount=${or(d.amount)}`,
+    `amount=${or(amount)}`,
     `state=${or(d.state)}`,
     `metadata=${metadata ? 'yes' : 'no'}`,
     `memberId=${metadata?.memberId ? 'yes' : 'no'}`,
