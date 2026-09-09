@@ -5,7 +5,7 @@
 // We LINK the official FFKarate PDFs rather than hardcoding the medical rules
 // (they change from one season to the next).
 
-import { getOffer, offerIsContact } from './config.js';
+import { getOffer, normalizeAids, offerIsContact } from './config.js';
 
 export const DOC_LINKS = {
   // Annex 1: health questionnaire to be filled in by the parent WITH the child.
@@ -16,8 +16,9 @@ export const DOC_LINKS = {
     'https://www.ffkarate.fr/wp-content/uploads/2024/08/ATTESTATION-SUR-LHONNEUR-SPORTIF-MINEUR_ANNEXE2_2023_2024_M_2.pdf',
   noteCertificatMedical:
     'https://www.ffkarate.fr/wp-content/uploads/2025/12/Note-dinformation-Certificat-medical-saison-2025-2026-2.pdf',
+  // Season-dated: the club publishes a new PEPS form every season.
   formulairePeps:
-    'https://www.vbsl.fr/document-download/689a021a3ac6e_FormulairePEPS.pdf',
+    'https://www.vbsl.fr/document-download/6a7f3adf190f4_FormulairePEPS20262027.pdf',
 };
 
 /**
@@ -30,15 +31,19 @@ export const DOC_LINKS = {
  * @param {boolean} params.isMinor  member is a minor at registration time
  * @param {string}  params.offerId  chosen offer (to know if it's a contact discipline)
  * @param {'youth'|'adult'|null} [params.tariff] tariff band applied to the fee
- * @param {{type?: string}} [params.aid] selected aid
+ * @param {{type?: string}[]} [params.aids] selected aids (they cumulate); the
+ *        pre-cumulation `params.aid` object is still accepted
  * @returns {{id:string, label:string, help?:string, link?:string, linkLabel?:string}[]}
  */
-export function requiredDocuments({ isMinor, offerId, tariff, aid } = {}) {
+export function requiredDocuments({ isMinor, offerId, tariff, aids, aid } = {}) {
   const offer = getOffer(offerId);
   const contact = offerIsContact(offer);
   const disciplines = offer?.disciplines || [];
   const hasKarate = disciplines.includes('karate');
   const hasStriking = disciplines.includes('boxing') || disciplines.includes('mma');
+  // Aids cumulate, so these are memberships, not one exclusive choice: a member
+  // holding both gets both checklists.
+  const claimed = new Set(normalizeAids({ aids, aid }).map((a) => a.type));
   const docs = [];
 
   // ID photo: mandatory for karate; for the Shidokan Triathlon, only for
@@ -131,7 +136,7 @@ export function requiredDocuments({ isMinor, offerId, tariff, aid } = {}) {
     }
   }
 
-  if (aid?.type === 'peps') {
+  if (claimed.has('peps')) {
     docs.push({
       id: 'peps',
       label: 'Formulaire PEPS complété + pièces demandées',
@@ -142,7 +147,7 @@ export function requiredDocuments({ isMinor, offerId, tariff, aid } = {}) {
       linkLabel: 'Formulaire PEPS',
     });
   }
-  if (aid?.type === 'passsport') {
+  if (claimed.has('passsport')) {
     docs.push({
       id: 'passsport',
       label: 'Justificatif Pass\'Sport (courrier/code officiel)',

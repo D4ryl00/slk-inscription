@@ -82,6 +82,9 @@ fieldset.inline input { width: auto; margin: 0; }
 
 .check { display: flex; align-items: flex-start; gap: 8px; color: var(--ink); margin-bottom: 10px; }
 .check input { width: auto; margin: 3px 0 0; }
+/* What hangs off the .check above it (its text field, its note), lined up under
+   the wording rather than under the box. `.hint` resets margin, hence `.hint&`. */
+.check-sub, .hint.check-sub { margin-left: 26px; }
 
 .docs { list-style: none; padding: 0; margin: 0; }
 .docs li { padding: 10px 0; border-top: 1px solid var(--line); }
@@ -102,6 +105,7 @@ button[type="submit"] {
 button[type="submit"]:disabled { opacity: 0.6; cursor: default; }
 
 .hint { color: var(--muted); font-size: 0.8rem; margin: 8px 0 0; }
+
 .error { color: var(--error); font-weight: 600; min-height: 1.2em; }
 #offlineError { margin: 6px 0 0; font-size: 0.85rem; }
 .hidden { display: none; }

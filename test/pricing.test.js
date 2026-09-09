@@ -94,18 +94,18 @@ test('aid deduction with code', () => {
     offerId: 'karate-mix-boxing',
     paymentPlan: '1x',
     dateNaissance: ADULT,
-    aid: { type: 'passsport', code: 'ABC123' },
+    aids: [{ type: 'passsport', code: 'ABC123' }],
   }, AUG_2026);
   assert.equal(p.ok, true);
   assert.equal(p.totalCents, 33000 - AIDS.passsport.amount * 100);
-  assert.equal(p.aidApplied.code, 'ABC123');
+  assert.equal(p.aidsApplied[0].code, 'ABC123');
 });
 
 test('aid requiring a code without code → error (Pass\'Sport)', () => {
   const p = computePrice({
     offerId: 'cardio-1',
     paymentPlan: '1x',
-    aid: { type: 'passsport', code: '' },
+    aids: [{ type: 'passsport', code: '' }],
   });
   assert.equal(p.ok, false);
 });
@@ -114,10 +114,98 @@ test('PEPS without code → OK (the code is no longer asked online)', () => {
   const p = computePrice({
     offerId: 'cardio-1',
     paymentPlan: '1x',
-    aid: { type: 'peps', code: '' },
+    aids: [{ type: 'peps', code: '' }],
   });
   assert.equal(p.ok, true);
-  assert.equal(p.aidApplied.amountCents, AIDS.peps.amount * 100);
+  assert.equal(p.aidsApplied[0].amountCents, AIDS.peps.amount * 100);
+});
+
+// --- Cumulative aids (a member may hold both PEPS and Pass'Sport) -----------
+
+test("Pass'Sport and PEPS cumulate: both amounts are deducted", () => {
+  const p = computePrice({
+    offerId: 'karate-mix-boxing',
+    paymentPlan: '1x',
+    dateNaissance: ADULT,
+    aids: [{ type: 'passsport', code: 'ABC123' }, { type: 'peps' }],
+  }, AUG_2026);
+  assert.equal(p.ok, true);
+  assert.equal(p.aidCents, (AIDS.passsport.amount + AIDS.peps.amount) * 100);
+  assert.equal(p.totalCents, 33000 - 8000);
+});
+
+test('each cumulated aid is reported on its own, with its code', () => {
+  const p = computePrice({
+    offerId: 'karate-mix-boxing',
+    paymentPlan: '1x',
+    dateNaissance: ADULT,
+    aids: [{ type: 'passsport', code: 'ABC123' }, { type: 'peps' }],
+  }, AUG_2026);
+  assert.deepEqual(p.aidsApplied.map((a) => a.type), ['passsport', 'peps']);
+  assert.equal(p.aidsApplied[0].code, 'ABC123');
+  assert.equal(p.aidsApplied[1].amountCents, AIDS.peps.amount * 100);
+});
+
+test('no aid selected → nothing deducted, empty list', () => {
+  const p = computePrice(
+    { offerId: 'karate-mix-boxing', paymentPlan: '1x', dateNaissance: ADULT, aids: [] },
+    AUG_2026,
+  );
+  assert.equal(p.ok, true);
+  assert.equal(p.aidCents, 0);
+  assert.deepEqual(p.aidsApplied, []);
+  assert.equal(p.totalCents, 33000);
+});
+
+test('cumulated aids over the fee → total floored at 0, never negative', () => {
+  // Late in the season a 180 € offer is already discounted down near the 80 €
+  // of cumulated aid; the two together must not turn the total negative.
+  const JUN_2027 = new Date('2027-06-11T12:00:00Z');
+  const p = computePrice({
+    offerId: 'cardio-1',
+    paymentPlan: '1x',
+    dateNaissance: ADULT,
+    familyAlreadyRegistered: 1, // −50 € on top
+    aids: [{ type: 'passsport', code: 'ABC123' }, { type: 'peps' }],
+  }, JUN_2027);
+  assert.equal(p.ok, true);
+  assert.equal(p.aidCents, 8000);
+  assert.equal(p.lateDiscountCents + p.familyDiscountCents + p.aidCents > 18000, true);
+  assert.equal(p.totalCents, 0);
+});
+
+test('a cumulated selection still requires the Pass\'Sport code', () => {
+  const p = computePrice({
+    offerId: 'karate-mix-boxing',
+    paymentPlan: '1x',
+    dateNaissance: ADULT,
+    aids: [{ type: 'passsport', code: '' }, { type: 'peps' }],
+  }, AUG_2026);
+  assert.equal(p.ok, false);
+  assert.equal(p.error.includes("Pass'Sport"), true);
+});
+
+test('the same aid listed twice is counted once', () => {
+  const p = computePrice({
+    offerId: 'karate-mix-boxing',
+    paymentPlan: '1x',
+    dateNaissance: ADULT,
+    aids: [{ type: 'peps' }, { type: 'peps' }],
+  }, AUG_2026);
+  assert.equal(p.aidCents, AIDS.peps.amount * 100);
+});
+
+test('a submission stored before cumulation (single `aid`) is still priced', () => {
+  // The webhook replays blobs written days earlier, under the previous shape.
+  const p = computePrice({
+    offerId: 'karate-mix-boxing',
+    paymentPlan: '1x',
+    dateNaissance: ADULT,
+    aid: { type: 'passsport', code: 'ABC123' },
+  }, AUG_2026);
+  assert.equal(p.ok, true);
+  assert.equal(p.totalCents, 33000 - AIDS.passsport.amount * 100);
+  assert.equal(p.aidsApplied[0].code, 'ABC123');
 });
 
 test('unknown offer → error', () => {
@@ -321,7 +409,7 @@ test('buildSheetRow: right number of columns and placement of key fields', () =>
     contactConfiance: { prenom: 'Bob', nom: 'Martin', telephone: '0611111111' },
     offerId: 'karate-mix-boxing',
     reglementInterieur: true, rgpdConsent: true,
-    aid: { type: 'passsport', code: 'PS-42' },
+    aids: [{ type: 'passsport', code: 'PS-42' }],
   };
   const pay = {
     date: '2026-07-04T10:00:00Z',
@@ -342,6 +430,35 @@ test('buildSheetRow: right number of columns and placement of key fields', () =>
   assert.equal(row[FORM_COLUMNS.indexOf("Aide Pass'Sport")].includes('PS-42'), true);
   // "office" columns NOT managed by the code (absent from FORM_COLUMNS)
   assert.equal(FORM_COLUMNS.includes('CERTIF MÉD'), false);
+});
+
+test('buildSheetRow: cumulated aids fill both aid columns', () => {
+  const row = buildSheetRow(
+    {
+      offerId: 'karate-mix-boxing',
+      aids: [{ type: 'passsport', code: 'PS-42' }, { type: 'peps' }],
+    },
+    { netTotalCents: 25000, onlineAmountCents: 25000, onlinePaymentId: '1', offlinePayments: [] },
+  );
+  assert.equal(row[FORM_COLUMNS.indexOf("Aide Pass'Sport")].includes('PS-42'), true);
+  assert.equal(row[FORM_COLUMNS.indexOf('Aide PEPS')].includes('30 €'), true);
+});
+
+test('buildSheetRow: an aid not selected leaves its column empty', () => {
+  const row = buildSheetRow(
+    { offerId: 'karate-mix-boxing', aids: [{ type: 'peps' }] },
+    { netTotalCents: 25000, onlineAmountCents: 25000, onlinePaymentId: '1', offlinePayments: [] },
+  );
+  assert.equal(row[FORM_COLUMNS.indexOf("Aide Pass'Sport")], '');
+  assert.equal(row[FORM_COLUMNS.indexOf('Aide PEPS')] !== '', true);
+});
+
+test('buildSheetRow: a pre-cumulation blob (single `aid`) still fills its column', () => {
+  const row = buildSheetRow(
+    { offerId: 'karate-mix-boxing', aid: { type: 'passsport', code: 'PS-9' } },
+    { netTotalCents: 25000, onlineAmountCents: 25000, onlinePaymentId: '1', offlinePayments: [] },
+  );
+  assert.equal(row[FORM_COLUMNS.indexOf("Aide Pass'Sport")].includes('PS-9'), true);
 });
 
 // --- "Paiement en ligne" cell: a plan must not read as fully collected ---------

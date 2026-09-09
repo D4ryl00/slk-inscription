@@ -20,6 +20,7 @@ import { isMinorFromBirthdate, requiredDocuments } from './shared/docs.js';
 import { parsePastedBirthdate } from './birthdate.js';
 
 const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => [...document.querySelectorAll(sel)];
 const form = $('#form');
 
 // --- Fill the offers list ---------------------------------------------------
@@ -193,17 +194,28 @@ function readOfflinePayments(fd) {
   return list;
 }
 
-// --- Aid: show the code field if an aid is chosen ---------------------------
-const aidType = $('#aidType');
+// --- Aids: cumulative, so one checkbox each ---------------------------------
+// The code is only asked for aids that require it (Pass'Sport). For PEPS there
+// is no online code: the form is brought to the office.
+const aidBoxes = $$('input[name="aid"]');
 const aidCodeWrap = $('#aidCodeWrap');
-aidType.addEventListener('change', () => {
-  // The code is only asked for aids that require it (Pass'Sport).
-  // For PEPS, no online code: the form is brought to the office.
-  const needsCode = Boolean(AIDS[aidType.value]?.requiresCode);
-  aidCodeWrap.classList.toggle('hidden', !needsCode);
-  $('#aidCode').required = needsCode;
-  refresh();
-});
+aidBoxes.forEach((box) =>
+  box.addEventListener('change', () => {
+    const needsCode = readAids().some(({ type }) => AIDS[type]?.requiresCode);
+    aidCodeWrap.classList.toggle('hidden', !needsCode);
+    $('#aidCode').required = needsCode;
+    if (!needsCode) $('#aidCode').value = '';
+    refresh();
+  }),
+);
+
+/** The aids currently ticked, in the order the form lists them. */
+function readAids() {
+  const code = ($('#aidCode')?.value || '').trim();
+  return aidBoxes
+    .filter((b) => b.checked)
+    .map((b) => ({ type: b.value, code: AIDS[b.value]?.requiresCode ? code : '' }));
+}
 
 // --- Read the current form state --------------------------------------------
 function readForm() {
@@ -236,7 +248,7 @@ function readForm() {
     cardioJours: fd.getAll('cardioJours'),
     familyAlreadyRegistered: parseInt(fd.get('familyAlreadyRegistered') || '0', 10) || 0,
     paymentPlan: fd.get('paymentPlan') || '1x',
-    aid: aidType.value ? { type: aidType.value, code: (fd.get('aidCode') || '').trim() } : { type: null },
+    aids: readAids(),
     offlinePayments: readOfflinePayments(fd),
     reglementInterieur: fd.get('reglementInterieur') === 'on',
     rgpdConsent: fd.get('rgpdConsent') === 'on',
@@ -252,7 +264,7 @@ function priceOf(s, offlinePayments = s.offlinePayments) {
     paymentPlan: s.paymentPlan,
     familyAlreadyRegistered: s.familyAlreadyRegistered,
     nouvelAdherent: s.nouvelAdherent,
-    aid: s.aid,
+    aids: s.aids,
     offlinePayments,
   });
 }
@@ -351,7 +363,9 @@ function refresh() {
     }
     if (price.familyDiscountCents > 0) parts.push(`Réduction famille : −${formatEuros(price.familyDiscountCents)}`);
     if (price.lateDiscountCents > 0) parts.push(`Remise saison entamée : −${formatEuros(price.lateDiscountCents)}`);
-    if (price.aidApplied) parts.push(`Aide ${price.aidApplied.label} : −${formatEuros(price.aidApplied.amountCents)}`);
+    for (const a of price.aidsApplied || []) {
+      parts.push(`Aide ${a.label} : −${formatEuros(a.amountCents)}`);
+    }
     if (price.newMemberFeeCents > 0) parts.push(`Frais nouvel adhérent : +${formatEuros(price.newMemberFeeCents)}`);
     for (const o of price.offlinePayments) parts.push(`${o.label} (hors ligne) : −${formatEuros(o.amountCents)}`);
     parts.push(
@@ -394,7 +408,7 @@ function refresh() {
       isMinor: minor, // LEGAL minority today — not the tariff band
       offerId: s.offerId,
       tariff: price.ok ? price.tariff : null,
-      aid: s.aid,
+      aids: s.aids,
     });
     if (!docs.length) {
       list.innerHTML = '<li class="muted">Aucune pièce particulière à rapporter pour cette formule.</li>';

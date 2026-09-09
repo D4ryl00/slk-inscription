@@ -138,19 +138,19 @@
             <label><input type="radio" name="paymentPlan" value="3x" /> En 3 fois</label>
           </fieldset>
 
-          <fieldset>
-            <legend>Aide financière (optionnel)</legend>
-            <label>Type d'aide
-              <select name="aidType" id="aidType">
-                <option value="">Aucune</option>
-                <option value="passsport">Pass'Sport</option>
-                <option value="peps">PEPS</option>
-              </select>
-            </label>
-            <label id="aidCodeWrap" class="hidden">Code / référence de l'aide
+          <fieldset id="aidsField">
+            <legend>Aides financières (optionnel)</legend>
+            <p class="hint">Les deux aides sont <strong>cumulables</strong> : cochez celles auxquelles
+              vous avez droit. Leur montant est déduit du total, et vous rapportez le justificatif au bureau.</p>
+
+            <label class="check"><input type="checkbox" name="aid" id="aidPasssport" value="passsport" /> Pass'Sport — −50 €</label>
+            <label id="aidCodeWrap" class="check-sub hidden">Code / référence Pass'Sport
               <input name="aidCode" id="aidCode" />
             </label>
-            <p class="hint">Le montant de l'aide est déduit du total. Vous devrez rapporter le justificatif au bureau.</p>
+
+            <label class="check"><input type="checkbox" name="aid" id="aidPeps" value="peps" /> PEPS (Prime Enfant) — −30 €</label>
+            <p class="hint check-sub">Aucun code à saisir en ligne : le formulaire à remplir et à
+              rapporter au bureau apparaît dans les pièces ci-dessous.</p>
           </fieldset>
 
           <fieldset id="offlineWrap">

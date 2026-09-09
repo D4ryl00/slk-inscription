@@ -125,6 +125,30 @@ export const AIDS = {
 };
 
 /**
+ * The aids a submission claims, as a clean list — the shape everything
+ * downstream (pricing, documents, Sheet row) reads.
+ *
+ * A member may hold SEVERAL aids at once: PEPS and Pass'Sport cumulate, and each
+ * is deducted in full. Unknown types are dropped and a type repeated twice is
+ * kept once, so a malformed payload can never be deducted more than the scale.
+ *
+ * Accepts the pre-cumulation `aid: {type, code}` shape as well: the webhook
+ * replays submission blobs written days earlier, which still carry it.
+ *
+ * @param {{aids?: {type?: string, code?: string}[], aid?: {type?: string, code?: string}}} [s]
+ * @returns {{type: string, code: string}[]} in AIDS order, at most one per type
+ */
+export function normalizeAids(s) {
+  const raw = Array.isArray(s?.aids) ? s.aids : s?.aid ? [s.aid] : [];
+  const byType = new Map();
+  for (const a of raw) {
+    if (!a?.type || !AIDS[a.type] || byType.has(a.type)) continue;
+    byType.set(a.type, { type: a.type, code: (a.code || '').trim() });
+  }
+  return [...byType.values()];
+}
+
+/**
  * New-member fee — a flat `amount` € added AUTOMATICALLY (no opt-out) to every
  * first-time registration (`nouvelAdherent === 'Oui'`), whatever the discipline.
  * (Replaces the former optional "Passeport Shidokan" add-on.)

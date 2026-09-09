@@ -2,7 +2,7 @@
 // The site writes ONLY the columns coming from the form (contiguous block from
 // column A). Positional write (some headers are duplicated) → array.
 
-import { AIDS, FORM_COLUMNS, getOffer } from './config.js';
+import { AIDS, FORM_COLUMNS, getOffer, normalizeAids } from './config.js';
 import { formatEuros } from './pricing.js';
 
 const oui = (b) => (b ? 'Oui' : 'Non');
@@ -21,7 +21,7 @@ export function buildSheetRow(s, pay) {
   const sectionLabel = offer ? offer.label : s.offerId || '';
   const addr = s.adresse || {};
   const cc = s.contactConfiance || {};
-  const aid = s.aid || {};
+  const claimedAids = normalizeAids(s);
   const p = pay || {};
   const offline = p.offlinePayments || [];
 
@@ -70,11 +70,13 @@ export function buildSheetRow(s, pay) {
       ' — à encaisser au bureau'
     : '';
 
+  // One column per aid, and aids cumulate: a member holding both fills both.
   const aidCell = (type) => {
-    if (aid.type !== type) return '';
+    const claimed = claimedAids.find((c) => c.type === type);
+    if (!claimed) return '';
     const a = AIDS[type];
-    const codePart = a?.requiresCode ? ` — code ${aid.code || '?'}` : '';
-    return `Déduit ${a ? a.amount + ' €' : ''}${codePart} — À VÉRIFIER`;
+    const codePart = a.requiresCode ? ` — code ${claimed.code || '?'}` : '';
+    return `Déduit ${a.amount} €${codePart} — À VÉRIFIER`;
   };
 
   // Order = FORM_COLUMNS.

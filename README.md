@@ -24,7 +24,8 @@ et enregistrement automatique de l'adhérent dans un **Google Sheet** après pai
 > inscrit dans la colonne **Photo** du Sheet. Sans dossier ni identifiants OAuth configurés, l'envoi
 > est simplement ignoré (la colonne Photo reste vide, le reste fonctionne).
 
-**Paiement mixte.** Le total dû = cotisation − réduction famille − aides (PEPS/Pass'Sport).
+**Paiement mixte.** Le total dû = cotisation − réduction famille − aides (PEPS/Pass'Sport,
+**cumulables** : l'adhérent qui a droit aux deux les déduit toutes les deux).
 L'adhérent peut régler une partie **hors ligne** (chèque, chèques vacances, espèces, encaissés
 au bureau) ; le **reste** est payé en CB sur HelloAsso. Si le hors ligne couvre tout, **aucun
 paiement en ligne** n'a lieu et la ligne est écrite directement dans le Sheet. Le détail (total,
@@ -283,7 +284,8 @@ d'une nouvelle saison (ex. **2027-2028**), reprendre cette liste dans l'ordre, p
   remise est répartie pour que le cumul = le barème (appliqué une seule fois). ⚠️ **Déclaratif** :
   repose sur l'honnêteté de la saisie ; le bureau peut recouper via le nom de famille dans le Sheet.
 - **Montants des aides** (`AIDS`) — Pass'Sport 50 €, PEPS 30 € (à revérifier chaque saison).
-  Le PEPS est aussi appelé « Prime Enfant ».
+  Le PEPS est aussi appelé « Prime Enfant ». Les deux **se cumulent** ; le total est plafonné
+  à 0 € si les aides dépassent la cotisation.
 - **Moyens de paiement hors ligne** (`PAYMENT_METHODS`) — chèque, chèques vacances, espèces.
 - **Cardio Budo = discipline de contact ?** (`DISCIPLINES.cardio.contact`) — défaut : non.
 - **Colonnes ambiguës** : `Règlement intérieur` (auto) vs `REGLEMENT` (bureau) ; doublon

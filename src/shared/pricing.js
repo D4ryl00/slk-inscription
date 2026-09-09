@@ -12,6 +12,7 @@ import {
   getOffer,
   lateSeasonDiscount,
   licenseFeesForOffer,
+  normalizeAids,
   offerPriceAnnual,
   tariffForAge,
 } from './config.js';
@@ -34,7 +35,8 @@ export const formatEuros = (c) =>
  * @param {'1x'|'3x'} selection.paymentPlan
  * @param {number} [selection.familyAlreadyRegistered=0] household members already registered
  * @param {string} [selection.nouvelAdherent] 'Oui' → the flat new-member fee applies
- * @param {{type?: 'passsport'|'peps'|null, code?: string}} [selection.aid]
+ * @param {{type: 'passsport'|'peps', code?: string}[]} [selection.aids] cumulative; the
+ *        pre-cumulation `selection.aid` object is still accepted (cf. normalizeAids)
  * @param {{method: string, amount: number}[]} [selection.offlinePayments] amounts (€) paid offline
  * @param {Date} [refDate=new Date()] reference date for the late-season proration
  * @returns {{
@@ -44,7 +46,7 @@ export const formatEuros = (c) =>
  *   aidCents?: number, newMemberFeeCents?: number,
  *   licenseFees?: {label: string, amountCents: number}[],
  *   totalCents?: number, currency?: 'EUR',
- *   aidApplied?: {type: string, label: string, code: string, amountCents: number}|null,
+ *   aidsApplied?: {type: string, label: string, code: string, amountCents: number}[],
  *   offlinePayments?: {method: string, label: string, amountCents: number}[],
  *   offlineTotalCents?: number, cbAmountCents?: number
  * }}
@@ -84,18 +86,19 @@ export function computePrice(selection, refDate = new Date()) {
     amountCents: toCents(l.amount),
   }));
 
-  // --- Aid (PEPS / Pass'Sport), deducted only if a code is entered ------------
+  // --- Aids (PEPS / Pass'Sport) ----------------------------------------------
+  // They CUMULATE: a member entitled to both has both deducted. The total is
+  // floored at 0 below, so aids worth more than the fee cost the club nothing.
   let aidCents = 0;
-  let aidApplied = null;
-  const aidType = selection?.aid?.type;
-  if (aidType && AIDS[aidType]) {
-    const aid = AIDS[aidType];
-    const code = (selection.aid.code || '').trim();
+  const aidsApplied = [];
+  for (const { type, code } of normalizeAids(selection)) {
+    const aid = AIDS[type];
     if (aid.requiresCode && !code) {
       return { ok: false, error: `Un code/référence est requis pour l'aide ${aid.label}.` };
     }
-    aidCents = toCents(aid.amount);
-    aidApplied = { type: aidType, label: aid.label, code, amountCents: aidCents };
+    const amountCents = toCents(aid.amount);
+    aidCents += amountCents;
+    aidsApplied.push({ type, label: aid.label, code, amountCents });
   }
 
   // --- New-member fee (automatic flat fee for first-time registrations) -------
@@ -143,7 +146,7 @@ export function computePrice(selection, refDate = new Date()) {
     familyDiscountCents,
     lateDiscountCents,
     aidCents,
-    aidApplied,
+    aidsApplied,
     newMemberFeeCents,
     licenseFees,
     totalCents,

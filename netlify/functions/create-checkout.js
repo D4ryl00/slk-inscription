@@ -37,7 +37,7 @@ export default async (req) => {
     paymentPlan: s.paymentPlan,
     familyAlreadyRegistered: s.familyAlreadyRegistered,
     nouvelAdherent: s.nouvelAdherent,
-    aid: s.aid,
+    aids: s.aids,
     offlinePayments: s.offlinePayments,
   });
   if (!price.ok) return json({ error: price.error }, 400);
@@ -92,7 +92,13 @@ export default async (req) => {
       containsDonation: false,
       payer: { firstName: s.prenom, lastName: s.nom, email: s.email },
       // ⚠️ metadata is returned ONLY in the webhook → that's where we recover memberId
-      metadata: { memberId, offerId: s.offerId, paymentPlan: s.paymentPlan, aidType: s.aid?.type || null },
+      // Diagnostic only — nothing reads these back to decide an amount.
+      metadata: {
+        memberId,
+        offerId: s.offerId,
+        paymentPlan: s.paymentPlan,
+        aidTypes: price.aidsApplied.map((a) => a.type).join('+') || null,
+      },
       returnUrl: `${site}/merci?m=${memberId}`,
       backUrl: `${site}/`,
       errorUrl: `${site}/erreur`,
