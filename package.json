@@ -9,6 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test test/*.test.js",
+    "test:e2e": "playwright test",
+    "check": "npm test && npm run test:e2e && npm run build",
     "drive:token": "node scripts/get-drive-refresh-token.mjs",
     "check:helloasso": "node scripts/check-helloasso-access.mjs",
     "smoke:installment": "node scripts/smoke-installment.mjs"
@@ -18,6 +20,7 @@
     "googleapis": "^144.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "netlify-cli": "^17.0.0",
     "vite": "^5.4.0"
   },

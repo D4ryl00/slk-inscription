@@ -9,3 +9,7 @@ dist/
 
 # Working notes, deliberately untracked
 docs/plan-corrections-helloasso.md
+
+# Playwright
+test-results/
+playwright-report/
