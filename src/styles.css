@@ -135,6 +135,14 @@ fieldset.inline input { width: auto; margin: 0; }
    the wording rather than under the box. `.hint` resets margin, hence `.hint&`. */
 .check-sub, .hint.check-sub { margin-left: 26px; }
 
+/* One tick box per payment method, with its amount field hanging underneath.
+   The gap separates the pairs, so an amount is read against its own method. */
+#offlineMethods > div + div { margin-top: 10px; }
+#offlineMethods .check { margin-bottom: 0; }
+#offlineMethods .check-sub { margin-top: 6px; max-width: 320px; }
+#cardPlanWrap { margin-top: 6px; margin-bottom: 14px; }
+#cardPlanWrap .hint { margin-top: 0; margin-bottom: 8px; }
+
 .docs { list-style: none; padding: 0; margin: 0; }
 .docs li { padding: 10px 0; border-top: 1px solid var(--line); }
 .docs li:first-child { border-top: 0; }
@@ -156,7 +164,7 @@ button[type="submit"]:disabled { opacity: 0.6; cursor: default; }
 .hint { color: var(--muted); font-size: 0.8rem; margin: 8px 0 0; }
 
 .error { color: var(--error); font-weight: 600; min-height: 1.2em; }
-#offlineError { margin: 6px 0 0; font-size: 0.85rem; }
+#paymentError { margin: 6px 0 0; font-size: 0.85rem; }
 .hidden { display: none; }
 
 /* Highlighted note (e.g. HelloAsso contribution heads-up) */

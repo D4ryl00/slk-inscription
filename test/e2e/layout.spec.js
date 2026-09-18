@@ -123,6 +123,19 @@ test('the layout holds once the cardio day picker appears', async ({ page }) => 
   expect(await page.evaluate(invariants)).toEqual([]);
 });
 
+// Every payment method ticked at once: the amount fields and the instalment
+// choice are all revealed, which is the widest this block ever gets.
+test('the layout holds with every payment method revealed', async ({ page }) => {
+  await chooseOffer(page, 'karate-mix-boxing');
+  await page.fill('input[name="dateNaissance"]', '2010-05-04');
+  await page.check('#payByCard');
+  for (const key of ['cheque', 'cheques_vacances', 'especes']) {
+    await page.check(`input[name="offlineUse_${key}"]`);
+  }
+  await expect(page.locator('#cardPlanWrap')).toBeVisible();
+  expect(await page.evaluate(invariants)).toEqual([]);
+});
+
 // Guards the rule that decides where a required mark goes: onto the legend for a
 // real group (several boxes sharing a name), onto each label otherwise. Grouping
 // the three consents into a fieldset had silently moved all three onto the
