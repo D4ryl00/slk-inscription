@@ -24,47 +24,67 @@
             <label><input type="radio" name="nouvelAdherent" value="Oui" required /> Oui</label>
             <label><input type="radio" name="nouvelAdherent" value="Non" /> Non (renouvellement)</label>
           </fieldset>
-          <div class="grid2">
-            <label>Prénom<input name="prenom" required /></label>
-            <label>Nom<input name="nom" required /></label>
-            <label>Date de naissance<input type="date" name="dateNaissance" required /></label>
-            <label>Lieu de naissance<input name="lieuNaissance" required /></label>
-          </div>
-          <label>Nom des parents (si différent de l'enfant)
-            <input name="nomParents" />
-          </label>
-          <label>Photo d'identité
-            <input type="file" name="photo" id="photo" accept="image/*" />
-          </label>
-          <p class="hint">Photo récente et nette. Envoyez-la dès maintenant si vous le pouvez : le
-            bureau en a besoin au format numérique pour établir les licences. L'envoi reste
-            facultatif et <strong>ne remplace pas</strong> la photo à remettre au bureau.
-            Non nécessaire pour le Cardio-Budo.</p>
+          <fieldset>
+            <legend>État civil</legend>
+            <div class="grid2">
+              <label>Prénom<input name="prenom" required /></label>
+              <label>Nom<input name="nom" required /></label>
+              <label>Date de naissance<input type="date" name="dateNaissance" required /></label>
+              <label>Lieu de naissance<input name="lieuNaissance" required /></label>
+            </div>
+            <label>Nom des parents (si différent de l'enfant)
+              <input name="nomParents" />
+            </label>
+          </fieldset>
+
+          <fieldset>
+            <legend>Photo d'identité</legend>
+            <label>Choisir une photo
+              <input type="file" name="photo" id="photo" accept="image/*" />
+            </label>
+            <p class="hint">Photo récente et nette. Envoyez-la dès maintenant si vous le pouvez : le
+              bureau en a besoin au format numérique pour établir les licences. L'envoi reste
+              facultatif et <strong>ne remplace pas</strong> la photo à remettre au bureau.
+              Non nécessaire pour le Cardio-Budo.</p>
+          </fieldset>
         </section>
 
         <!-- ── Contact details ─────────────────────────────────────── -->
         <section class="card">
           <h2>2. Coordonnées</h2>
-          <div class="grid2">
-            <label class="col2">Adresse — numéro et rue<input name="adresse_numeroRue" autocomplete="address-line1" required /></label>
-            <label class="col2">Complément d'adresse<input name="adresse_complement" autocomplete="address-line2" /></label>
-            <label>Ville<input name="adresse_ville" autocomplete="address-level2" required /></label>
-            <label>Code postal<input name="adresse_codePostal" inputmode="numeric" autocomplete="postal-code" required /></label>
-            <label>Pays<input name="adresse_pays" value="France" autocomplete="country-name" required /></label>
-            <label>Email<input type="email" name="email" autocomplete="email" required /></label>
-            <label>Numéro de téléphone<input name="telephone" inputmode="tel" autocomplete="tel" required /></label>
-          </div>
+          <fieldset>
+            <legend>Adresse</legend>
+            <div class="grid2">
+              <label class="col2">Numéro et rue<input name="adresse_numeroRue" autocomplete="address-line1" required /></label>
+              <label class="col2">Complément d'adresse<input name="adresse_complement" autocomplete="address-line2" /></label>
+              <label>Ville<input name="adresse_ville" autocomplete="address-level2" required /></label>
+              <label>Code postal<input name="adresse_codePostal" inputmode="numeric" autocomplete="postal-code" required /></label>
+              <label>Pays<input name="adresse_pays" value="France" autocomplete="country-name" required /></label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Pour vous joindre</legend>
+            <div class="grid2">
+              <label>Email<input type="email" name="email" autocomplete="email" required /></label>
+              <label>Numéro de téléphone<input name="telephone" inputmode="tel" autocomplete="tel" required /></label>
+            </div>
+          </fieldset>
+
           <fieldset class="inline">
             <legend>Acceptez-vous de paraître sur les réseaux sociaux (manifestations du club) ?</legend>
             <label><input type="radio" name="reseauxSociaux" value="Oui" required /> Oui</label>
             <label><input type="radio" name="reseauxSociaux" value="Non" /> Non</label>
           </fieldset>
-          <h3>Contact de confiance</h3>
-          <div class="grid2">
-            <label>Prénom<input name="cc_prenom" required /></label>
-            <label>Nom<input name="cc_nom" required /></label>
-            <label>Téléphone<input name="cc_telephone" inputmode="tel" required /></label>
-          </div>
+
+          <fieldset>
+            <legend>Contact de confiance</legend>
+            <div class="grid2">
+              <label>Prénom<input name="cc_prenom" required /></label>
+              <label>Nom<input name="cc_nom" required /></label>
+              <label>Téléphone<input name="cc_telephone" inputmode="tel" required /></label>
+            </div>
+          </fieldset>
         </section>
 
         <!-- ── Class schedule ──────────────────────────────────────── -->
@@ -93,14 +113,17 @@
 
           <!-- One option per discipline: the tariff comes from the birthdate
                entered above, so there is no age category to pick here. -->
-          <label>Formule
-            <select name="offerId" id="offerId" required>
-              <option value="" disabled selected>— Sélectionnez une formule —</option>
-            </select>
-          </label>
+          <fieldset>
+            <legend>Formule</legend>
+            <label>Choisissez votre discipline
+              <select name="offerId" id="offerId" required>
+                <option value="" disabled selected>— Sélectionnez une formule —</option>
+              </select>
+            </label>
 
-          <!-- Advisory only: the age floor does not block the registration -->
-          <p id="ageWarning" class="notice hidden" role="status"></p>
+            <!-- Advisory only: the age floor does not block the registration -->
+            <p id="ageWarning" class="notice hidden" role="status"></p>
+          </fieldset>
 
           <div id="cardioDaysWrap" class="hidden">
             <fieldset>
@@ -113,13 +136,14 @@
           </div>
 
           <!-- Grade: conditional on the Karate section (filled dynamically) -->
-          <div id="karateFields" class="hidden">
-            <label>Grade Shidokan
+          <fieldset id="karateFields" class="hidden">
+            <legend>Grade Shidokan</legend>
+            <label>Votre grade actuel
               <select name="gradeShidokan" id="gradeShidokan">
                 <option value="" disabled selected>— Sélectionnez votre grade —</option>
               </select>
             </label>
-          </div>
+          </fieldset>
 
           <!-- Motivations: shown for Karate and Boxing/MMA (filled dynamically) -->
           <fieldset id="motivationsField" class="hidden">
@@ -127,15 +151,25 @@
             <div id="motivations" class="chips"></div>
           </fieldset>
 
-          <label>Membres de votre famille déjà inscrits cette saison (hors cette inscription)
-            <input type="number" name="familyAlreadyRegistered" min="0" step="1" value="0" />
-          </label>
-          <p class="hint">Réduction famille répartie automatiquement : −50 € au 2ᵉ membre du foyer, −70 € au 3ᵉ, −100 € au 4ᵉ.</p>
+          <fieldset>
+            <legend>Réduction famille</legend>
+            <label>Membres de votre famille déjà inscrits cette saison (hors cette inscription)
+              <input type="number" name="familyAlreadyRegistered" min="0" step="1" value="0" />
+            </label>
+            <p class="hint">Comptez les inscriptions déjà faites, sans vous compter : si vous êtes le
+              2ᵉ de la famille à vous inscrire, indiquez 1 ; le 3ᵉ, indiquez 2 ; et ainsi de suite.
+              Vous êtes le premier (ou seul) inscrit du foyer : laissez 0.</p>
+            <p class="hint">La réduction est répartie automatiquement : −50 € au 2ᵉ membre du foyer,
+              −70 € au 3ᵉ, −100 € au 4ᵉ.</p>
+          </fieldset>
 
           <fieldset class="inline">
-            <legend>Mode de règlement</legend>
+            <legend>Mode de règlement en ligne (carte bancaire)</legend>
             <label><input type="radio" name="paymentPlan" value="1x" checked /> En 1 fois</label>
             <label><input type="radio" name="paymentPlan" value="3x" /> En 3 fois</label>
+            <p class="hint">Ce choix ne concerne que la partie réglée en ligne par carte. Les
+              règlements hors ligne (chèques, chèques vacances, espèces) s'organisent directement
+              avec le bureau du club et ne sont pas concernés par le paiement en 3 fois.</p>
           </fieldset>
 
           <fieldset id="aidsField">
@@ -179,15 +213,18 @@
             <div id="priceDetail" class="price-detail"></div>
           </div>
 
-          <label class="check"><input type="checkbox" name="reglementInterieur" required />
-            <span class="check-text">J'ai lu et j'accepte le
-              <a href="https://drive.google.com/file/d/1ELuyGdrdGI1x90IA8JZjhJZe9HaK4GMH/view?usp=sharing" target="_blank" rel="noopener">règlement intérieur</a>
-              du club.</span></label>
-          <label class="check"><input type="checkbox" name="rgpdConsent" required />
-            <span class="check-text">J'accepte que mes données soient traitées pour la gestion de mon adhésion, conformément à la
-              <a href="https://drive.google.com/file/d/1pu5Ik1UrFg-7liK-Antcr9VyefySQjxN/view?usp=sharing" target="_blank" rel="noopener">politique de confidentialité (RGPD)</a>.</span></label>
-          <label class="check"><input type="checkbox" name="engagementPieces" required />
-            <span class="check-text">Je m'engage à rapporter les pièces demandées au bureau du club.</span></label>
+          <fieldset>
+            <legend>Vos engagements</legend>
+            <label class="check"><input type="checkbox" name="reglementInterieur" required />
+              <span class="check-text">J'ai lu et j'accepte le
+                <a href="https://drive.google.com/file/d/1ELuyGdrdGI1x90IA8JZjhJZe9HaK4GMH/view?usp=sharing" target="_blank" rel="noopener">règlement intérieur</a>
+                du club.</span></label>
+            <label class="check"><input type="checkbox" name="rgpdConsent" required />
+              <span class="check-text">J'accepte que mes données soient traitées pour la gestion de mon adhésion, conformément à la
+                <a href="https://drive.google.com/file/d/1pu5Ik1UrFg-7liK-Antcr9VyefySQjxN/view?usp=sharing" target="_blank" rel="noopener">politique de confidentialité (RGPD)</a>.</span></label>
+            <label class="check"><input type="checkbox" name="engagementPieces" required />
+              <span class="check-text">Je m'engage à rapporter les pièces demandées au bureau du club.</span></label>
+          </fieldset>
 
           <p id="helloAssoNote" class="notice hidden"><strong>À noter :</strong> à l'étape suivante,
             HelloAsso ajoute par défaut une contribution volontaire à son fonctionnement. Elle est

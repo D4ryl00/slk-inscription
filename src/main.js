@@ -125,6 +125,16 @@ function addMark(anchor, mode) {
   else anchor.appendChild(span);
 }
 
+// A box belongs to a group when its fieldset holds several boxes sharing its
+// name: one asterisk on the legend then covers them all. Boxes that merely sit
+// in the same fieldset without sharing a name (the consents) are independent
+// requirements, so each keeps its own mark.
+function isGroupedBox(ctrl) {
+  const fs = ctrl.closest('fieldset');
+  if (!fs || !ctrl.name) return false;
+  return fs.querySelectorAll(`input[name="${CSS.escape(ctrl.name)}"]`).length > 1;
+}
+
 function updateRequiredMarks() {
   form.querySelectorAll('.req').forEach((el) => el.remove());
 
@@ -132,8 +142,8 @@ function updateRequiredMarks() {
     const ctrl = label.querySelector(':scope > input, :scope > select, :scope > textarea');
     if (!ctrl || !ctrl.required) return;
     const isBox = ctrl.type === 'checkbox' || ctrl.type === 'radio';
-    // Radios/checkboxes grouped in a fieldset → asterisk carried by the legend.
-    if (isBox && label.closest('fieldset')) return;
+    // Grouped radios/checkboxes → asterisk carried by the legend instead.
+    if (isBox && isGroupedBox(ctrl)) return;
     // Checkbox (consents): asterisk at the end of the text (inside .check-text to
     // stay on the same line in the flex layout). Text/select field:
     // "Label *" right before the control.
@@ -144,7 +154,8 @@ function updateRequiredMarks() {
   // Required radio/checkbox groups → asterisk on the fieldset legend.
   form.querySelectorAll('fieldset').forEach((fs) => {
     const legend = fs.querySelector('legend');
-    const grouped = fs.querySelector('input[type="radio"]:required, input[type="checkbox"]:required');
+    const grouped = [...fs.querySelectorAll('input[type="radio"]:required, input[type="checkbox"]:required')]
+      .some(isGroupedBox);
     if (legend && grouped) addMark(legend, 'append');
   });
 }

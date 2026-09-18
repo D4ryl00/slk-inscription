@@ -41,6 +41,7 @@ body {
 label { display: block; font-size: 0.9rem; color: var(--muted); margin-bottom: 12px; }
 input, select, textarea {
   width: 100%;
+  max-width: 100%;
   margin-top: 4px;
   padding: 9px 11px;
   font: inherit;
@@ -49,16 +50,64 @@ input, select, textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
 }
+/* iOS Safari sizes input[type=date] from its native widget and ignores the
+   width we set (measured on an iPhone simulator: 318px inside a 294px slot), so
+   the date field alone overflowed its panel. Dropping the native appearance
+   makes it an ordinary box again; tapping it still opens the system picker. */
+input[type="date"] { -webkit-appearance: none; appearance: none; }
+/* Without the native widget the inner value box collapses while the field is
+   empty (measured: 20px tall against 42px for a text input), so give it a line
+   box of its own and keep the value left-aligned like every other field. */
+input[type="date"]::-webkit-date-and-time-value { min-height: 1.5em; text-align: left; }
+
 input:focus, select:focus, textarea:focus {
   outline: 2px solid var(--brand);
   outline-offset: 1px;
 }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+/* The row gap belongs to the grid, not to the labels: a trailing label margin
+   would otherwise push the bottom of every fieldset out of alignment. */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+.grid2 > label { margin-bottom: 0; }
 .grid2 .col2 { grid-column: 1 / -1; }
 @media (max-width: 540px) { .grid2 { grid-template-columns: 1fr; } }
 
-fieldset { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 0 0 12px; }
-legend { font-size: 0.9rem; color: var(--muted); padding: 0 6px; }
+/* Grouping blocks inside a card. Tinted, because a 1px --line border on the
+   white card was too faint to tell one group from the next. */
+fieldset {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 0 0 20px;
+  background: #f8f9fb;
+}
+/* The legend is what announces a new group, so it must not look like one more
+   line of grey help text: dark ink and a heavier weight.
+   `float` takes it out of the notch-in-the-border rendering and makes it a
+   plain block title: a long legend wraps to two lines at phone width, and a
+   notch cut for a wrapped legend leaves the panel with no visible top edge. */
+legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+/* A float is out of flow: without this the first control would sit under it. */
+legend + * { clear: both; }
+/* A paragraph sitting between two blocks explains the one ABOVE it: keep it
+   close to that block and away from the next legend, otherwise it reads as the
+   next block's introduction. */
+fieldset + .hint, fieldset + p { margin-top: 6px; }
+.hint + fieldset { margin-top: 22px; }
+/* Whatever closes a block, the fieldset's own padding closes the gap. */
+fieldset > :last-child { margin-bottom: 0; }
+/* Conversely, an intro line must not sit flush against the controls it
+   introduces — `.hint` carries no bottom margin of its own. */
+.hint + .check, .hint + .chips, .hint + .grid2, .hint + label { margin-top: 12px; }
+/* The card's own padding already closes the section. */
+.card > fieldset:last-child { margin-bottom: 0; }
 fieldset.inline label { display: inline-flex; align-items: center; gap: 6px; margin: 0 16px 0 0; color: var(--ink); }
 fieldset.inline input { width: auto; margin: 0; }
 
