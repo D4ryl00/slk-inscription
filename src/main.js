@@ -64,8 +64,15 @@ const ageWarningEl = $('#ageWarning');
 // spreadsheet has to be retyped. Only unambiguous text is taken (see
 // parsePastedBirthdate); anything else is left to the browser rather than
 // guessed, because a wrong birthdate here does not show up on the price.
+//
+// The listener sits on the document, not on the field, because Firefox does not
+// deliver the event to a focused input[type=date]: it fires the paste with the
+// clipboard intact but retargets it to <body>. Chrome and Safari target the
+// input, and the event reaches the document either way, so one listener covers
+// all three — what identifies the destination is the focus, not the target.
 const birthdateInput = form.elements.dateNaissance;
-birthdateInput.addEventListener('paste', (e) => {
+document.addEventListener('paste', (e) => {
+  if (document.activeElement !== birthdateInput) return;
   const iso = parsePastedBirthdate(e.clipboardData?.getData('text'));
   if (!iso) return;
   e.preventDefault();
@@ -160,27 +167,40 @@ function updateRequiredMarks() {
   });
 }
 
-// --- Offline payment methods (entered amounts) ------------------------------
-// Every amount carries a "max" button, right-aligned inside the field: a member
-// settling everything at the office should not have to compute the remainder
-// (and computePrice rejects an amount above the total anyway).
+// --- Payment methods --------------------------------------------------------
+// One tick box per method, card included. The card box is what makes paying
+// online a choice rather than the default route; its amount is never typed,
+// it is whatever the offline amounts leave behind.
+//
+// Each offline amount carries a "max" button, right-aligned inside the field: a
+// member settling everything at the office should not have to compute the
+// remainder (and computePrice rejects an amount above the total anyway).
 const offlineMethodsWrap = $('#offlineMethods');
 const offlineInputs = new Map();
+const offlineBoxes = new Map();
+const offlineAmountWraps = new Map();
 for (const [key, m] of Object.entries(PAYMENT_METHODS)) {
-  const label = document.createElement('label');
-  label.innerHTML =
-    `${m.label} (€)` +
+  const row = document.createElement('div');
+  row.innerHTML =
+    `<label class="check"><input type="checkbox" name="offlineUse_${key}" /> ` +
+    `<span class="check-text">${m.label}</span></label>` +
+    `<label class="check-sub hidden" data-amount-for="${key}">Montant (€)` +
     '<span class="field-max">' +
     `<input type="number" name="offline_${key}" min="0" step="0.01" placeholder="0" />` +
     `<button type="button" class="max-btn" data-offline-max="${key}" ` +
-    `title="Mettre le reste à payer" ` +
+    'title="Mettre le reste à payer" ' +
     `aria-label="Mettre le reste à payer en ${m.label}">max</button>` +
-    '</span>';
-  offlineMethodsWrap.appendChild(label);
-  offlineInputs.set(key, label.querySelector('input'));
+    '</span>' +
+    '</label>';
+  offlineMethodsWrap.appendChild(row);
+  offlineInputs.set(key, row.querySelector(`input[name="offline_${key}"]`));
+  offlineBoxes.set(key, row.querySelector(`input[name="offlineUse_${key}"]`));
+  offlineAmountWraps.set(key, row.querySelector(`[data-amount-for="${key}"]`));
 }
 const maxButtons = [...offlineMethodsWrap.querySelectorAll('.max-btn')];
-const offlineError = $('#offlineError');
+const paymentError = $('#paymentError');
+const cardPlanWrap = $('#cardPlanWrap');
+const cardAmountLine = $('#cardAmountLine');
 
 offlineMethodsWrap.addEventListener('click', (e) => {
   const btn = e.target.closest('.max-btn');
@@ -196,9 +216,21 @@ offlineMethodsWrap.addEventListener('click', (e) => {
   refresh();
 });
 
+// Unticking a method must not leave its amount behind: a forgotten value would
+// keep weighing on the total while its field is out of sight.
+offlineMethodsWrap.addEventListener('change', (e) => {
+  const box = e.target.closest('input[type="checkbox"]');
+  if (!box || box.checked) return;
+  const key = [...offlineBoxes.entries()].find(([, b]) => b === box)?.[0];
+  if (key) offlineInputs.get(key).value = '';
+});
+
+// Only a ticked method counts, so an amount left in a field the member has
+// since unticked never reaches the price.
 function readOfflinePayments(fd) {
   const list = [];
   for (const key of Object.keys(PAYMENT_METHODS)) {
+    if (fd.get(`offlineUse_${key}`) !== 'on') continue;
     const amount = parseFloat(fd.get(`offline_${key}`) || '0');
     if (amount > 0) list.push({ method: key, amount });
   }
@@ -258,6 +290,7 @@ function readForm() {
     gradeShidokan: (fd.get('gradeShidokan') || '').trim(),
     cardioJours: fd.getAll('cardioJours'),
     familyAlreadyRegistered: parseInt(fd.get('familyAlreadyRegistered') || '0', 10) || 0,
+    payByCard: fd.get('payByCard') === 'on',
     paymentPlan: fd.get('paymentPlan') || '1x',
     aids: readAids(),
     offlinePayments: readOfflinePayments(fd),
@@ -350,6 +383,13 @@ function refresh() {
   const detail = $('#priceDetail');
   const helloAssoNote = $('#helloAssoNote');
 
+  // Reveal what each ticked method needs: the instalment choice belongs to the
+  // card, an amount field to every offline method.
+  cardPlanWrap.classList.toggle('hidden', !s.payByCard);
+  for (const [key, box] of offlineBoxes) {
+    offlineAmountWraps.get(key).classList.toggle('hidden', !box.checked);
+  }
+
   if (!price.ok) {
     totalEl.textContent = '—';
     cbEl.textContent = '—';
@@ -358,9 +398,7 @@ function refresh() {
     // Never keep advertising the last valid amount: the total now reads "—".
     submitBtn.textContent = SUBMIT_LABEL_DEFAULT;
   } else {
-    submitBtn.disabled = false;
     totalEl.textContent = formatEuros(price.totalCents);
-    cbEl.textContent = formatEuros(price.cbAmountCents);
     const tariff = price.tariff ? TARIFFS[price.tariff] : null;
     const parts = [
       `Cotisation : ${formatEuros(price.baseCents)}` +
@@ -379,27 +417,66 @@ function refresh() {
     }
     if (price.newMemberFeeCents > 0) parts.push(`Frais nouvel adhérent : +${formatEuros(price.newMemberFeeCents)}`);
     for (const o of price.offlinePayments) parts.push(`${o.label} (hors ligne) : −${formatEuros(o.amountCents)}`);
-    parts.push(
-      price.cbAmountCents > 0
-        ? `À payer en ligne : ${formatEuros(price.cbAmountCents)}${s.paymentPlan === '3x' ? ' en 3 fois' : ''}`
-        : 'Aucun paiement en ligne (tout réglé hors ligne)',
-    );
+
+    // `cbAmountCents` is what the offline amounts leave behind. It only becomes
+    // a card payment if the member asked for one; otherwise it is the part they
+    // have not covered yet, and the form says so instead of quietly charging it.
+    const remainderCents = price.cbAmountCents;
+    const cardCents = s.payByCard ? remainderCents : 0;
+    const uncoveredCents = s.payByCard ? 0 : remainderCents;
+    const nothingChosen = !s.payByCard && price.offlinePayments.length === 0;
+    // A membership fully covered by aids costs nothing, so it needs no method.
+    const needsPayment = price.totalCents > 0;
+
+    cbEl.textContent = formatEuros(cardCents);
+    if (nothingChosen && needsPayment) {
+      parts.push('Choisissez votre mode de règlement ci-dessous.');
+    } else if (uncoveredCents > 0) {
+      parts.push(`Reste à couvrir : ${formatEuros(uncoveredCents)}`);
+    } else {
+      parts.push(
+        cardCents > 0
+          ? `À payer en ligne : ${formatEuros(cardCents)}${s.paymentPlan === '3x' ? ' en 3 fois' : ''}`
+          : 'Aucun paiement en ligne (tout réglé hors ligne)',
+      );
+    }
     detail.innerHTML = parts.map((p) => `<span>${p}</span>`).join('');
-    submitBtn.textContent =
-      price.cbAmountCents > 0
-        ? `Payer ${formatEuros(price.cbAmountCents)} en ligne et m'inscrire`
-        : 'Valider mon inscription (règlement au bureau)';
+
+    const blocked = (nothingChosen || uncoveredCents > 0) && needsPayment;
+    submitBtn.disabled = blocked;
+    // A disabled button must not advertise an outcome that is not on offer: no
+    // settling at the office while the amounts do not add up.
+    if (blocked) submitBtn.textContent = SUBMIT_LABEL_DEFAULT;
+    else {
+      submitBtn.textContent =
+        cardCents > 0
+          ? `Payer ${formatEuros(cardCents)} en ligne et m'inscrire`
+          : 'Valider mon inscription (règlement au bureau)';
+    }
+
+    // What the card will actually take, shown where the card is chosen rather
+    // than only in the summary above.
+    cardAmountLine.textContent =
+      remainderCents > 0
+        ? `Par carte : ${formatEuros(remainderCents)} — le reste une fois vos autres règlements déduits.`
+        : 'Vos règlements hors ligne couvrent déjà le total : aucun paiement par carte ne sera demandé.';
   }
 
   // HelloAsso adds an optional contribution on its own payment page — flag it
   // only when there is actually an online card payment.
-  helloAssoNote.classList.toggle('hidden', !(price.ok && price.cbAmountCents > 0));
+  const cardWillCharge = price.ok && s.payByCard && price.cbAmountCents > 0;
+  helloAssoNote.classList.toggle('hidden', !cardWillCharge);
 
-  // An amount typed here is wrong (over the total, negative): say so right under
-  // the fields, the summary further down is too far to be noticed while typing.
-  const offlineMsg = price.errorField === OFFLINE_FIELD ? price.error : '';
-  offlineError.textContent = offlineMsg;
-  offlineError.classList.toggle('hidden', !offlineMsg);
+  // Problems belong next to the boxes, not only in the summary: an amount over
+  // the total, or a total the chosen methods do not cover.
+  let paymentMsg = price.errorField === OFFLINE_FIELD ? price.error : '';
+  if (!paymentMsg && price.ok && !s.payByCard && price.cbAmountCents > 0 && price.totalCents > 0) {
+    paymentMsg = price.offlinePayments.length
+      ? `Il reste ${formatEuros(price.cbAmountCents)} à régler : cochez la carte bancaire ou complétez vos montants.`
+      : '';
+  }
+  paymentError.textContent = paymentMsg;
+  paymentError.classList.toggle('hidden', !paymentMsg);
 
   // A "max" button is usable as long as ITS own remainder can be computed —
   // an overshoot elsewhere must not disable the very button that would fix it.

@@ -163,15 +163,6 @@
               −70 € au 3ᵉ, −100 € au 4ᵉ.</p>
           </fieldset>
 
-          <fieldset class="inline">
-            <legend>Mode de règlement en ligne (carte bancaire)</legend>
-            <label><input type="radio" name="paymentPlan" value="1x" checked /> En 1 fois</label>
-            <label><input type="radio" name="paymentPlan" value="3x" /> En 3 fois</label>
-            <p class="hint">Ce choix ne concerne que la partie réglée en ligne par carte. Les
-              règlements hors ligne (chèques, chèques vacances, espèces) s'organisent directement
-              avec le bureau du club et ne sont pas concernés par le paiement en 3 fois.</p>
-          </fieldset>
-
           <fieldset id="aidsField">
             <legend>Aides financières (optionnel)</legend>
             <p class="hint">Les deux aides sont <strong>cumulables</strong> : cochez celles auxquelles
@@ -185,15 +176,6 @@
             <label class="check"><input type="checkbox" name="aid" id="aidPeps" value="peps" /> PEPS (Prime Enfant) — −30 €</label>
             <p class="hint check-sub">Aucun code à saisir en ligne : le formulaire à remplir et à
               rapporter au bureau apparaît dans les pièces ci-dessous.</p>
-          </fieldset>
-
-          <fieldset id="offlineWrap">
-            <legend>Régler une partie hors ligne (optionnel)</legend>
-            <p class="hint">Chèque, chèques vacances, espèces : ces montants sont encaissés au bureau
-              et déduits de ce que vous payez en ligne. Si tout est réglé hors ligne, aucun
-              paiement par carte n'est demandé.</p>
-            <div id="offlineMethods" class="grid2"></div>
-            <p id="offlineError" class="error hidden" role="alert"></p>
           </fieldset>
         </section>
 
@@ -212,6 +194,31 @@
             <div class="price-line"><span>À payer en ligne (CB)</span><strong id="priceCb">—</strong></div>
             <div id="priceDetail" class="price-detail"></div>
           </div>
+
+          <!-- Payment methods sit directly under the total on purpose: the member
+               sees what is due before choosing how to settle it. Nothing is
+               ticked by default — a pre-ticked card box kept reading as "online
+               payment is what is expected of you", which it is not. -->
+          <fieldset id="paymentField">
+            <legend>Comment souhaitez-vous régler ? <span class="muted">(plusieurs choix possibles)</span></legend>
+
+            <label class="check"><input type="checkbox" name="payByCard" id="payByCard" />
+              <span class="check-text">Carte bancaire — en ligne, via HelloAsso</span></label>
+            <div id="cardPlanWrap" class="check-sub hidden">
+              <p class="hint" id="cardAmountLine"></p>
+              <div class="chips">
+                <label class="chip"><input type="radio" name="paymentPlan" value="1x" checked /> En 1 fois</label>
+                <label class="chip"><input type="radio" name="paymentPlan" value="3x" /> En 3 fois</label>
+              </div>
+            </div>
+
+            <!-- One row per offline method, filled by main.js from PAYMENT_METHODS. -->
+            <div id="offlineMethods"></div>
+
+            <p class="hint">Les règlements hors ligne sont encaissés au bureau du club. Le paiement
+              en 1 ou 3 fois ne concerne que la carte bancaire.</p>
+            <p id="paymentError" class="error hidden" role="alert"></p>
+          </fieldset>
 
           <fieldset>
             <legend>Vos engagements</legend>
