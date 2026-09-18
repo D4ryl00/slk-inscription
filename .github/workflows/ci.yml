@@ -1,0 +1,30 @@
+name: CI
+
+# Runs on pull requests (the gate before merging) and on main (a safety net for
+# anything that still lands directly).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A new push to a branch makes the run already in flight pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Only the two engines playwright.config.js drives; `--with-deps` pulls the
+      # system libraries WebKit needs on the runner.
+      - run: npx playwright install --with-deps chromium webkit
+      # One command, the same one run locally before pushing, so the two cannot
+      # drift apart: unit tests, layout invariants, then the production build.
+      - run: npm run check
