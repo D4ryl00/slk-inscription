@@ -64,8 +64,15 @@ const ageWarningEl = $('#ageWarning');
 // spreadsheet has to be retyped. Only unambiguous text is taken (see
 // parsePastedBirthdate); anything else is left to the browser rather than
 // guessed, because a wrong birthdate here does not show up on the price.
+//
+// The listener sits on the document, not on the field, because Firefox does not
+// deliver the event to a focused input[type=date]: it fires the paste with the
+// clipboard intact but retargets it to <body>. Chrome and Safari target the
+// input, and the event reaches the document either way, so one listener covers
+// all three — what identifies the destination is the focus, not the target.
 const birthdateInput = form.elements.dateNaissance;
-birthdateInput.addEventListener('paste', (e) => {
+document.addEventListener('paste', (e) => {
+  if (document.activeElement !== birthdateInput) return;
   const iso = parsePastedBirthdate(e.clipboardData?.getData('text'));
   if (!iso) return;
   e.preventDefault();
