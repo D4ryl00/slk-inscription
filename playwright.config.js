@@ -26,6 +26,7 @@ export default defineConfig({
     { name: 'iphone-13', use: { ...devices['iPhone 13'] } },
     { name: 'chromium-desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 900 } } },
     { name: 'webkit-desktop', use: { ...devices['Desktop Safari'], viewport: { width: 1280, height: 900 } } },
+    { name: 'firefox-desktop', use: { ...devices['Desktop Firefox'], viewport: { width: 1280, height: 900 } } },
   ],
 
   webServer: {
