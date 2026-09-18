@@ -1,10 +1,11 @@
 name: CI
 
-# Runs on pull requests (the gate before merging) and on main (a safety net for
-# anything that still lands directly).
+# Runs on pull requests (the gate before merging) and on the two branches work
+# lands on: `sandbox`, where pull requests are merged, and `main`, which
+# deploys to production.
 on:
   push:
-    branches: [main]
+    branches: [main, sandbox]
   pull_request:
 
 # A new push to a branch makes the run already in flight pointless.
